@@ -38,3 +38,12 @@ override.tf.json
 terraform.rc
 .terraform.lock.hcl
 
+# macOs
+.DS_Store
+
+# Project
+keys/
+
+# TFLINT
+
+.tflint.hcl
