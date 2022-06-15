@@ -7,23 +7,14 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "3.73.0"
+      version = ">= 3.73.0"
+    }
+    awscc = {
+      source  = "hashicorp/awscc"
+      version = ">= 0.15.0"
     }
   }
 
-  required_version = "1.1.4"
+  required_version = ">= 0.15.0"
   experiments      = [module_variable_optional_attrs]
-}
-
-# AWS Provider configuration - AWS Region indicated in root/variables.tf
-provider "aws" {
-  region = var.aws_region
-
-  default_tags {
-    tags = {
-      Module    = "hub-and-spoke-tgw"
-      Terraform = "Managed"
-      Region    = var.aws_region
-    }
-  }
 }

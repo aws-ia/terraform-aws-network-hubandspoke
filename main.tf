@@ -3,162 +3,142 @@
 
 # --- root/main.tf ---
 
-# List of AZs available in the AWS Region
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-# AWS Transit Gateway Resources
+# ---------------- AWS TRANSIT GATEWAY ----------------
 resource "aws_ec2_transit_gateway" "tgw" {
-  description                     = "Transit-Gateway-${var.identifier}"
+  count = try(var.transit_gateway.id, "none") == "none" ? 0 : 1
+
+  description                     = "Transit_Gateway-${var.identifier}"
   default_route_table_association = "disable"
   default_route_table_propagation = "disable"
 
   tags = {
-    Name = "transit-gateway-${var.identifier}"
+    Name = var.transit_gateway.name
   }
 }
 
-module "tgw_rt" {
-  source     = "./modules/tgw_rt"
-  identifier = var.identifier
+# ---------------- CENTRAL VPCs ----------------
+module "central_vpcs" {
+  for_each = var.central_vpcs
 
-  inspection_vpc = var.inspection_vpc.create_vpc
-  egress_vpc     = var.egress_vpc.create_vpc
-  ingress_vpc    = var.ingress_vpc.create_vpc
-  endpoints_vpc  = var.endpoints_vpc.create_vpc
-  dns_vpc        = var.dns_vpc.create_vpc
+  source  = "aws-ia/vpc/aws"
+  version = ">= 1.0.0"
 
-  tgw_id                    = aws_ec2_transit_gateway.tgw.id
-  inspection_tgw_attachment = var.inspection_vpc.create_vpc ? module.inspection_vpc[0].tgw_attachment : ""
-  egress_tgw_attachment     = var.egress_vpc.create_vpc ? module.egress_vpc[0].tgw_attachment : ""
-  ingress_tgw_attachment    = var.ingress_vpc.create_vpc ? module.ingress_vpc[0].tgw_attachment : ""
-  endpoints_tgw_attachment  = var.endpoints_vpc.create_vpc ? module.endpoints_vpc[0].tgw_attachment : ""
-  dns_tgw_attachment        = var.dns_vpc.create_vpc ? module.dns_vpc[0].tgw_attachment : ""
-  spoke_tgw_attachments     = { for key, value in module.spoke_vpcs : key => value.tgw_attachment }
+  name               = try(each.value.name, each.key)
+  vpc_id             = try(each.value.vpc_id, null)
+  cidr_block         = try(each.value.cidr_block, null)
+  vpc_secondary_cidr = try(each.value.vpc_secondary_cidr, false)
+  az_count           = each.value.az_count
+
+  vpc_enable_dns_hostnames = try(each.value.vpc_enable_dns_hostnames, true)
+  vpc_enable_dns_support   = try(each.value.vpc_enable_dns_support, true)
+  vpc_instance_tenancy     = try(each.value.vpc_instance_tenancy, "default")
+  vpc_ipv4_ipam_pool_id    = try(each.value.vpc_ipv4_ipam_pool_id, null)
+  vpc_ipv4_netmask_length  = try(each.value.vpc_ipv4_netmask_length, null)
+
+  vpc_flow_logs = try(each.value.vpc_flow_logs, local.vpc_flow_logs_default)
+  subnets       = local.subnet_config[each.key]
+
+  tags = try(each.value.tags, {})
 }
 
-# VPCs
-# Inspection VPC - with our without Egress Traffic
-module "inspection_vpc" {
-  count            = var.inspection_vpc.create_vpc ? 1 : 0
-  source           = "./modules/inspection_vpc"
-  identifier       = var.identifier
-  cidr_block       = var.inspection_vpc.cidr_block
-  number_azs       = var.inspection_vpc.number_azs
-  azs_available    = data.aws_availability_zones.available.names
-  enable_logging   = var.inspection_vpc.enable_logging
-  enable_egress    = var.inspection_vpc.enable_egress
-  tgw_id           = aws_ec2_transit_gateway.tgw.id
-  vpc_flowlog_role = var.inspection_vpc.enable_logging ? var.log_variables.vpc_flowlog_role : ""
-  kms_key          = var.inspection_vpc.enable_logging ? var.log_variables.kms_key : ""
-}
+# -------- TRANSIT GATEWAY ROUTE TABLE AND ASSOCATIONS - CENTRAL VPCS --------
+resource "aws_ec2_transit_gateway_route_table" "tgw_route_table" {
+  for_each = module.central_vpcs
 
-# Egress VPC
-module "egress_vpc" {
-  count            = var.egress_vpc.create_vpc ? 1 : 0
-  source           = "./modules/egress_vpc"
-  identifier       = var.identifier
-  cidr_block       = var.egress_vpc.cidr_block
-  number_azs       = var.egress_vpc.number_azs
-  azs_available    = data.aws_availability_zones.available.names
-  enable_logging   = var.egress_vpc.enable_logging
-  tgw_id           = aws_ec2_transit_gateway.tgw.id
-  vpc_flowlog_role = var.egress_vpc.enable_logging ? var.log_variables.vpc_flowlog_role : ""
-  kms_key          = var.egress_vpc.enable_logging ? var.log_variables.kms_key : ""
-}
+  transit_gateway_id = local.transit_gateway_id
 
-# Ingress VPC
-module "ingress_vpc" {
-  count            = var.ingress_vpc.create_vpc ? 1 : 0
-  source           = "./modules/ingress_vpc"
-  identifier       = var.identifier
-  cidr_block       = var.ingress_vpc.cidr_block
-  number_azs       = var.ingress_vpc.number_azs
-  azs_available    = data.aws_availability_zones.available.names
-  enable_logging   = var.ingress_vpc.enable_logging
-  tgw_id           = aws_ec2_transit_gateway.tgw.id
-  vpc_flowlog_role = var.ingress_vpc.enable_logging ? var.log_variables.vpc_flowlog_role : ""
-  kms_key          = var.ingress_vpc.enable_logging ? var.log_variables.kms_key : ""
-}
-
-# Inspection VPC - with our without subnets for DNS forwarders
-module "endpoints_vpc" {
-  count            = var.endpoints_vpc.create_vpc ? 1 : 0
-  source           = "./modules/endpoints_vpc"
-  identifier       = var.identifier
-  cidr_block       = var.endpoints_vpc.cidr_block
-  number_azs       = var.endpoints_vpc.number_azs
-  azs_available    = data.aws_availability_zones.available.names
-  enable_logging   = var.endpoints_vpc.enable_logging
-  enable_dns       = var.endpoints_vpc.enable_dns
-  tgw_id           = aws_ec2_transit_gateway.tgw.id
-  vpc_flowlog_role = var.endpoints_vpc.enable_logging ? var.log_variables.vpc_flowlog_role : ""
-  kms_key          = var.endpoints_vpc.enable_logging ? var.log_variables.kms_key : ""
-}
-
-# DNS VPC
-module "dns_vpc" {
-  count            = var.dns_vpc.create_vpc ? 1 : 0
-  source           = "./modules/dns_vpc"
-  identifier       = var.identifier
-  cidr_block       = var.dns_vpc.cidr_block
-  number_azs       = var.dns_vpc.number_azs
-  azs_available    = data.aws_availability_zones.available.names
-  enable_logging   = var.dns_vpc.enable_logging
-  tgw_id           = aws_ec2_transit_gateway.tgw.id
-  vpc_flowlog_role = var.dns_vpc.enable_logging ? var.log_variables.vpc_flowlog_role : ""
-  kms_key          = var.dns_vpc.enable_logging ? var.log_variables.kms_key : ""
-}
-
-# Spoke VPCs
-module "spoke_vpcs" {
-  for_each              = var.spoke_vpcs
-  source                = "./modules/spoke_vpc"
-  identifier            = var.identifier
-  vpc_name              = each.key
-  cidr_block            = each.value.cidr_block
-  number_azs            = each.value.number_azs
-  azs_available         = data.aws_availability_zones.available.names
-  enable_logging        = each.value.enable_logging
-  tgw_id                = aws_ec2_transit_gateway.tgw.id
-  vpc_flowlog_role      = each.value.enable_logging ? var.log_variables.vpc_flowlog_role : ""
-  kms_key               = each.value.enable_logging ? var.log_variables.kms_key : ""
-  endpoints_vpc_created = var.endpoints_vpc.create_vpc
-}
-
-# SSM VPC ENDPOINTS
-# VPC endpoints - If Endpoints VPC is created, VPC endpoints are created there. If not, VPC endpoints are created in all the Spoke VPCs created
-module "centralized_endpoints" {
-  count          = var.endpoints_vpc.create_vpc ? 1 : 0
-  source         = "./modules/vpc_endpoints"
-  identifier     = var.identifier
-  sg_info        = local.security_groups.vpc_endpoints
-  endpoints_info = local.vpc_endpoints
-  vpc_id         = module.endpoints_vpc[0].vpc_id
-  vpc_subnets    = module.endpoints_vpc[0].endpoints_subnets
-}
-
-module "decentralized_endpoints" {
-  for_each = {
-    for key, value in module.spoke_vpcs : key => value
-    if !var.endpoints_vpc.create_vpc
+  tags = {
+    Name = "${each.key}-tgw-rt-${var.identifier}"
   }
-  source         = "./modules/vpc_endpoints"
-  identifier     = var.identifier
-  sg_info        = local.security_groups.vpc_endpoints
-  endpoints_info = local.vpc_endpoints
-  vpc_id         = each.value.vpc_id
-  vpc_subnets    = each.value.endpoints_subnets
 }
 
-# PRIVATE HOSTED ZONES
-# If endpoints are centralized, Spoke VPCs, Endpoints/DNS VPC need to have PHZs associated
-module "phz" {
-  count                  = var.endpoints_vpc.create_vpc ? 1 : 0
-  source                 = "./modules/phz"
-  spoke_vpcs             = { for key, value in module.spoke_vpcs : key => value.vpc_id }
-  central_vpc            = var.dns_vpc.create_vpc ? module.dns_vpc[0].vpc_id : module.endpoints_vpc[0].vpc_id
-  endpoint_info          = module.centralized_endpoints[0].vpc_endpoint_dns
-  endpoint_service_names = local.vpc_endpoints
+resource "aws_ec2_transit_gateway_route_table_association" "tgw_route_table_association" {
+  for_each = module.central_vpcs
+
+  transit_gateway_attachment_id = each.value.transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table[each.key].id
 }
+
+# --------- TRANSIT GATEWAY ROUTE TABLE AND ASSOCATIONS - SPOKE VPCS ---------
+resource "aws_ec2_transit_gateway_route_table" "spokes_tgw_rt" {
+  transit_gateway_id = local.transit_gateway_id
+
+  tags = {
+    Name = "spoke-vpc-tgw-rt-${var.identifier}"
+  }
+}
+
+# ASSOCIATION TO VPCS WHEN SPOKE VPCS ARE SUPPORTED
+
+# ---------------------- TRANSIT GATEWAY STATIC ROUTES ----------------------
+# If both Inspection and Egress VPCs are created, the Inspection TGW Route Table will have a static route to 0.0.0.0/0 with the Egress VPC as destination
+resource "aws_ec2_transit_gateway_route" "inspection_to_egress_route" {
+  count = length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2 ? 1 : 0
+
+  destination_cidr_block         = "0.0.0.0/0"
+  transit_gateway_attachment_id  = module.central_vpcs["egress"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["inspection"].id
+}
+
+# If both Inspection and Egress VPC are created, the Egress TGW Route Table should only have one route sending all the traffic to the Inspection VPC
+resource "aws_ec2_transit_gateway_route" "egress_to_inspection_route" {
+  count = length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2 ? 1 : 0
+
+  destination_cidr_block = "0.0.0.0/0"
+  transit_gateway_attachment_id = module.central_vpcs["inspection"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["egress"].id
+}
+
+# If both Inspection and Ingress VPC are created, the Ingress TGW Route Table should have a 0.0.0.0/0 route to the Inspection VPC
+resource "aws_ec2_transit_gateway_route" "ingress_to_inspection_route" {
+  count = length(setintersection(keys(var.central_vpcs), ["inspection", "ingress"])) == 2 ? 1 : 0
+
+  destination_cidr_block = "0.0.0.0/0"
+  transit_gateway_attachment_id = module.central_vpcs["inspection"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["ingress"].id
+}
+
+# In the Spoke VPCs, the default 0.0.0.0/0 static route destination is going to depend on the existence of the Inspection and Egress VPC
+# - If the Inspection VPC is created, regardless of the creation of the Egress VPC, the traffic from the Spoke VPCs will be routed to the Inspection VPC.
+# - The default route to 0.0.0.0/0 from the Spoke VPCs will only be routed to the Egress VPC if there's no Inspection VPC created.
+# - This route won't exist if there's not Inspection and Egress VPC
+resource "aws_ec2_transit_gateway_route" "spokes_static_default_route" {
+  count = length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) > 0 ? 1 : 0
+
+  destination_cidr_block         = "0.0.0.0/0"
+  transit_gateway_attachment_id  = contains(keys(var.central_vpcs), "inspection") ? module.central_vpcs["inspection"].transit_gateway_attachment_id : module.central_vpcs["egress"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes_tgw_rt.id
+}
+
+# -------------------- TRANSIT GATEWAY PROPAGATED ROUTES --------------------
+# If the Inspection VPC is created and there's no Egress VPC, all the Spoke VPCs propagate to the Inspection TGW Route Table
+#  TO ADD WHEN SUPPORTING SPOKE VPCs
+
+# If the Egress VPC is created and there's no Inspection VPC, all the Spoke VPCs propagate to the Egress TGW Route Table
+#  TO ADD WHEN SUPPORTING SPOKE VPCs
+
+# If the Shared Services VPC is created, all the Spokes VPCs propagate to the Shared Services TGW Route Table
+#  TO ADD WHEN SUPPORTING SPOKE VPCs
+
+# If there's no Inspection VPC created, all the Spoke VPCs propagate to the Ingress TGW Route Table
+#  TO ADD WHEN SUPPORTING SPOKE VPCs
+
+# If the Hybrid DNS VPC is created, all the Spokes VPCs propagate to the Hybrid DNS TGW Route Table
+#  TO ADD WHEN SUPPORTING SPOKE VPCs
+
+# If Shared Services VPC is created, it propagates its CIDR to the Spoke VPC TGW Route Table
+resource "aws_ec2_transit_gateway_route_table_propagation" "shared_services_to_spokes_propagation" {
+  count = try(var.central_vpcs.shared_services, "none") == "none" ? 0 : 1
+
+  transit_gateway_attachment_id  = module.central_vpcs["shared_services"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes_tgw_rt.id
+}
+
+# If Hybrid DNS VPC is created, it propagates its CIDR to the Spoke VPC TGW Route Table
+resource "aws_ec2_transit_gateway_route_table_propagation" "hybrid_dns_to_spokes_propagation" {
+  count = try(var.central_vpcs.hybrid_dns, "none") == "none" ? 0 : 1
+
+  transit_gateway_attachment_id  = module.central_vpcs["hybrid_dns"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes_tgw_rt.id
+}
+

@@ -3,52 +3,26 @@
 
 # --- root/outputs.tf ---
 
+# AWS TRANSIT GATEWAY (if created)
 output "transit_gateway" {
-  value       = aws_ec2_transit_gateway.tgw.id
-  description = "Transit Gateway ID."
+    description = "AWS Transit Gateway."
+    value = try(aws_ec2_transit_gateway.tgw[0], null)
 }
 
-output "inspection_vpc" {
-  value       = var.inspection_vpc.create_vpc ? module.inspection_vpc[0] : null
-  description = "Inspection VPC resources."
+# CENTRAL VPCS
+output "central_vpcs" {
+    description = "Central VPCs created."
+    value = module.central_vpcs
 }
 
-output "egress_vpc" {
-  value       = var.egress_vpc.create_vpc ? module.egress_vpc[0] : null
-  description = "Egress VPC resources."
+# TRANSIT GATEWAY CENTRAL VPCs ROUTE TABLES
+output "tgw_rt_central_vpcs" {
+    description = "Transit Gateway Route Tables associated to the Central VPC attachments."
+    value = aws_ec2_transit_gateway_route_table.tgw_route_table
 }
 
-output "ingress_vpc" {
-  value       = var.ingress_vpc.create_vpc ? module.ingress_vpc[0] : null
-  description = "Ingress VPC resources."
-}
-
-output "endpoints_vpc" {
-  value       = var.endpoints_vpc.create_vpc ? module.endpoints_vpc[0] : null
-  description = "Endpoints VPC resources."
-}
-
-output "dns_vpc" {
-  value       = var.dns_vpc.create_vpc ? module.dns_vpc[0] : null
-  description = "DNS VPC resources."
-}
-
-output "spoke_vpcs" {
-  value       = length(var.spoke_vpcs) == 0 ? null : module.spoke_vpcs
-  description = "Spoke VPCs resources."
-}
-
-output "centralized_vpc_endpoints" {
-  value       = var.endpoints_vpc.create_vpc ? module.centralized_endpoints[0] : null
-  description = "VPC endpoints (centralized in Endpoints VPC)"
-}
-
-output "decentralized_vpc_endpoints" {
-  value       = var.endpoints_vpc.create_vpc || length(var.spoke_vpcs) == 0 ? null : module.decentralized_endpoints
-  description = "VPC endpoints (decentralized in Spoke VPCs)"
-}
-
-output "private_hosted_zones" {
-  value       = var.endpoints_vpc.create_vpc ? module.phz[0] : null
-  description = "Private Hosted Zones (if centralized VPC endpoints)"
+# TRANSIT GATEWAY SPOKE VPC ROUTE TABLE
+output "tgw_rt_spoke_vpc" {
+    description = "Transit Gateway Route Table associated to the Spoke VPCs."
+    value = aws_ec2_transit_gateway_route_table.spokes_tgw_rt
 }
