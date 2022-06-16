@@ -7,7 +7,7 @@ This Terraform module helps you create the base of your networking infrastructur
 
 ## Architecture
 
-![Architecture diagram](https://github.com/aws-ia/terraform-aws-network-hubandspoke/blob/main/images/architecture_diagram.png)
+![Architecture diagram](https://github.com/aws-ia/terraform-aws-network-hubandspoke/blob/346b078adc3fc6ace62de2ba216a9ef92666b71b/images/architecture_diagram.png)
 
 ## Usage
 
@@ -142,14 +142,14 @@ central_vpcs = {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.15.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.73.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.73.0, < 4.0.0 |
 | <a name="requirement_awscc"></a> [awscc](#requirement\_awscc) | >= 0.15.0 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.73.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.73.0, < 4.0.0 |
 
 ## Modules
 
