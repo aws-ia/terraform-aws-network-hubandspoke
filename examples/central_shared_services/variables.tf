@@ -4,13 +4,13 @@
 # --- examples/central_inspection/variables.tf ---
 
 variable "aws_region" {
-    type = string
-    description = "AWS Region - to build the Hub and Spoke."
-    default = "eu-west-1"
+  type        = string
+  description = "AWS Region - to build the Hub and Spoke."
+  default     = "eu-west-1"
 }
 
 variable "identifier" {
-    type = string
-    description = "Project identifier."
-    default = "central-shared-services"
+  type        = string
+  description = "Project identifier."
+  default     = "central-shared-services"
 }

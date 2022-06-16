@@ -21,7 +21,7 @@ module "central_vpcs" {
   for_each = var.central_vpcs
 
   source  = "aws-ia/vpc/aws"
-  version = ">= 1.0.0"
+  version = ">= 1.4.0"
 
   name               = try(each.value.name, each.key)
   vpc_id             = try(each.value.vpc_id, null)
@@ -55,7 +55,7 @@ resource "aws_ec2_transit_gateway_route_table" "tgw_route_table" {
 resource "aws_ec2_transit_gateway_route_table_association" "tgw_route_table_association" {
   for_each = module.central_vpcs
 
-  transit_gateway_attachment_id = each.value.transit_gateway_attachment_id
+  transit_gateway_attachment_id  = each.value.transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table[each.key].id
 }
 
@@ -84,8 +84,8 @@ resource "aws_ec2_transit_gateway_route" "inspection_to_egress_route" {
 resource "aws_ec2_transit_gateway_route" "egress_to_inspection_route" {
   count = length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2 ? 1 : 0
 
-  destination_cidr_block = "0.0.0.0/0"
-  transit_gateway_attachment_id = module.central_vpcs["inspection"].transit_gateway_attachment_id
+  destination_cidr_block         = "0.0.0.0/0"
+  transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["egress"].id
 }
 
@@ -93,8 +93,8 @@ resource "aws_ec2_transit_gateway_route" "egress_to_inspection_route" {
 resource "aws_ec2_transit_gateway_route" "ingress_to_inspection_route" {
   count = length(setintersection(keys(var.central_vpcs), ["inspection", "ingress"])) == 2 ? 1 : 0
 
-  destination_cidr_block = "0.0.0.0/0"
-  transit_gateway_attachment_id = module.central_vpcs["inspection"].transit_gateway_attachment_id
+  destination_cidr_block         = "0.0.0.0/0"
+  transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["ingress"].id
 }
 

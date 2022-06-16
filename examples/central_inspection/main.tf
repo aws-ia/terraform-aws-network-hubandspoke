@@ -16,32 +16,32 @@ resource "aws_ec2_transit_gateway" "tgw" {
 
 # Hub and Spoke module - we only centralize the Inspection
 module "hub-and-spoke" {
-    source = "../.."
+  source = "../.."
 
-    aws_region = var.aws_region
-    identifier = var.identifier
-    
-    transit_gateway = {
-        id = aws_ec2_transit_gateway.tgw.id
-    }
+  aws_region = var.aws_region
+  identifier = var.identifier
 
-    central_vpcs = {
-        inspection = {
-            name = "inspection-vpc"
-            cidr_block = "10.10.0.0/16"
-            az_count = 2
+  transit_gateway = {
+    id = aws_ec2_transit_gateway.tgw.id
+  }
 
-            subnets = {
-                public = {
-                    netmask = 24
-                }
-                inspection = {
-                    netmask = 24
-                }
-                transit_gateway = {
-                    netmask = 28
-                }
-            }
+  central_vpcs = {
+    inspection = {
+      name       = "inspection-vpc"
+      cidr_block = "10.10.0.0/16"
+      az_count   = 2
+
+      subnets = {
+        public = {
+          netmask = 24
         }
+        inspection = {
+          netmask = 24
+        }
+        transit_gateway = {
+          netmask = 28
+        }
+      }
     }
+  }
 }

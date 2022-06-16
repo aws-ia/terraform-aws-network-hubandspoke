@@ -149,8 +149,8 @@ locals {
     with_private = {
       public = merge(
         {
-          name_prefix               = try(var.central_vpcs.ingress.subnets.public.name_prefix, "public")                # Default value: "public"
-          nat_gateway_configuration = try(var.central_vpcs.ingress.subnets.public.nat_gateway_configuration, "none")    # Default value: NO NATGWs in Ingress VPC
+          name_prefix               = try(var.central_vpcs.ingress.subnets.public.name_prefix, "public")             # Default value: "public"
+          nat_gateway_configuration = try(var.central_vpcs.ingress.subnets.public.nat_gateway_configuration, "none") # Default value: NO NATGWs in Ingress VPC
           tags                      = try(var.central_vpcs.ingress.subnets.public.tags, {})
         },
         try(var.central_vpcs.ingress.subnets.public, {})
@@ -158,7 +158,7 @@ locals {
       private = merge(
         {
           name_prefix              = try(var.central_vpcs.ingress.subnets.private.name_prefix, "private") # Default value: "private"
-          route_to_transit_gateway = ["10.0.0.0/8"] # PLACEHOLDER
+          route_to_transit_gateway = ["10.0.0.0/8"]                                                       # PLACEHOLDER
           tags                     = try(var.central_vpcs.ingress.subnets.private.tags, {})
         },
         try(var.central_vpcs.ingress.subnets.private, {})
@@ -177,9 +177,9 @@ locals {
     without_private = {
       public = merge(
         {
-          name_prefix               = try(var.central_vpcs.ingress.subnets.public.name_prefix, "public")                # Default value: "public"
-          nat_gateway_configuration = try(var.central_vpcs.ingress.subnets.public.nat_gateway_configuration, "none")    # Default value: NO NATGWs in Ingress VPC
-          route_to_transit_gateway = ["10.0.0.0/8"] # PLACEHOLDER
+          name_prefix               = try(var.central_vpcs.ingress.subnets.public.name_prefix, "public")             # Default value: "public"
+          nat_gateway_configuration = try(var.central_vpcs.ingress.subnets.public.nat_gateway_configuration, "none") # Default value: NO NATGWs in Ingress VPC
+          route_to_transit_gateway  = ["10.0.0.0/8"]                                                                 # PLACEHOLDER
           tags                      = try(var.central_vpcs.ingress.subnets.public.tags, {})
         },
         try(var.central_vpcs.ingress.subnets.public, {})

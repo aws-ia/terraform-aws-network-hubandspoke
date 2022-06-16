@@ -7,7 +7,7 @@ This Terraform module helps you create the base of your networking infrastructur
 
 ## Architecture
 
-![Architecture diagram](./images/architecture\_diagram.png)
+![Architecture diagram](https://github.com/aws-ia/terraform-aws-network-hubandspoke/images/architecture_diagram.png)
 
 ## Usage
 
@@ -155,7 +155,7 @@ central_vpcs = {
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_central_vpcs"></a> [central\_vpcs](#module\_central\_vpcs) | aws-ia/vpc/aws | >= 1.0.0 |
+| <a name="module_central_vpcs"></a> [central\_vpcs](#module\_central\_vpcs) | aws-ia/vpc/aws | >= 1.4.0 |
 
 ## Resources
 
@@ -176,7 +176,6 @@ central_vpcs = {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS Region to build the Hub and Spoke. | `string` | n/a | yes |
 | <a name="input_central_vpcs"></a> [central\_vpcs](#input\_central\_vpcs) | Configuration of the Central VPCs - used to centralized different services. You can create the following central VPCs: "inspection", "egress", "shared-services", "hybrid-dns", and "ingress".<br>In each Central VPC, You can specify the following attributes:<br>- `vpc_id` = (Optional\|string) **If you specify this value, no other attributes can be set** VPC ID, the VPC will be attached to the Transit Gateway, and its attachment associate/propagated to the corresponding TGW Route Tables.<br>- `cidr_block` = (Optional\|string) CIDR range to assign to the VPC if creating a new VPC.<br>- `az_count` = (Optional\|number) Searches the number of AZs in the region and takes a slice based on this number - the slice is sorted a-z.<br>- `vpc_enable_dns_hostnames` = (Optional\|bool) Indicates whether the instances launched in the VPC get DNS hostnames. Enabled by default.<br>- `vpc_enable_dns_support` = (Optional\|bool) Indicates whether the DNS resolution is supported for the VPC. If enabled, queries to the Amazon provided DNS server at the 169.254.169.253 IP address, or the reserved IP address at the base of the VPC network range "plus two" succeed. If disabled, the Amazon provided DNS service in the VPC that resolves public DNS hostnames to IP addresses is not enabled. Enabled by default.<br>- `vpc_instance_tenancy` = (Optional\|string) The allowed tenancy of instances launched into the VPC.<br>- `vpc_flow_logs` = (Optional\|object(any)) Configuration of the VPC Flow Logs of the VPC configured. Options: "cloudwatch", "s3", "none".<br>- `subnet_configuration` = (Optional\|any) Configuration of the subnets to create in the VPC. Depending the type of central VPC to create, the format (subnets to configure) will be different.<br>To get more information of the format of the variables, check the section "Central VPCs" in the README.<pre></pre> | `any` | n/a | yes |
 | <a name="input_identifier"></a> [identifier](#input\_identifier) | String to identify the whole Hub and Spoke Architecture | `string` | n/a | yes |
 | <a name="input_transit_gateway"></a> [transit\_gateway](#input\_transit\_gateway) | Information about the Transit Gateway. Either you can specify the ID of a current Transit Gateway you created, or you specify a name and this module will proceed to create it. | <pre>object({<br>    name = optional(string)<br>    id   = optional(string)<br>  })</pre> | <pre>{<br>  "name": "transit_gateway"<br>}</pre> | no |

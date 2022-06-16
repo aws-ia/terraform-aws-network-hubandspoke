@@ -3,12 +3,6 @@
 
 # --- root/variables.tf ---
 
-# AWS Region
-variable "aws_region" {
-  type        = string
-  description = "AWS Region to build the Hub and Spoke."
-}
-
 # Module identifier
 variable "identifier" {
   type        = string

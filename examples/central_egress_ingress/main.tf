@@ -5,44 +5,44 @@
 
 # Hub and Spoke module - we only centralize the Egress and Ingress traffic
 module "hub-and-spoke" {
-    source = "../.."
+  source = "../.."
 
-    aws_region = var.aws_region
-    identifier = var.identifier
-    
-    transit_gateway = {
-        name = "tgw-${var.identifier}"
+  aws_region = var.aws_region
+  identifier = var.identifier
+
+  transit_gateway = {
+    name = "tgw-${var.identifier}"
+  }
+
+  central_vpcs = {
+    egress = {
+      name       = "egress-vpc"
+      cidr_block = "10.10.0.0/16"
+      az_count   = 2
+
+      subnets = {
+        public = {
+          netmask = 24
+        }
+        transit_gateway = {
+          netmask = 28
+        }
+      }
     }
 
-    central_vpcs = {
-        egress = {
-            name = "egress-vpc"
-            cidr_block = "10.10.0.0/16"
-            az_count = 2
+    ingress = {
+      name       = "ingress-vpc"
+      cidr_block = "10.20.0.0/16"
+      az_count   = 2
 
-            subnets = {
-                public = {
-                    netmask = 24
-                }
-                transit_gateway = {
-                    netmask = 28
-                }
-            }
+      subnets = {
+        public = {
+          netmask = 24
         }
-
-        ingress = {
-            name = "ingress-vpc"
-            cidr_block = "10.20.0.0/16"
-            az_count = 2
-
-            subnets = {
-                public = {
-                    netmask = 24
-                }
-                transit_gateway = {
-                    netmask = 28
-                }
-            }
+        transit_gateway = {
+          netmask = 28
         }
+      }
     }
+  }
 }
