@@ -26,3 +26,9 @@ output "tgw_rt_spoke_vpc" {
   description = "Transit Gateway Route Table associated to the Spoke VPCs."
   value       = aws_ec2_transit_gateway_route_table.spokes_tgw_rt
 }
+
+# FIREWALL SOLUTION CREATED
+output "firewall" {
+  description = "Firewall solution created."
+  value       = try(module.aws_network_firewall[0].network_firewall, null)
+}
