@@ -277,8 +277,6 @@ central_vpcs = {
   }
 ```
 
-### Examples
-
 ## Requirements
 
 | Name | Version |
