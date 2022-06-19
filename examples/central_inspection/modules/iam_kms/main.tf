@@ -6,45 +6,45 @@
 # DATA SOURCE: AWS CALLER IDENTITY - Used to get the Account ID
 data "aws_caller_identity" "current" {}
 
-# # VPC FLOW LOGS - ROLE AND POLICY
-# # IAM Role
-# data "aws_iam_policy_document" "policy_role_document" {
-#   statement {
-#     sid     = "1"
-#     actions = ["sts:AssumeRole"]
+# VPC FLOW LOGS - ROLE AND POLICY
+# IAM Role
+data "aws_iam_policy_document" "policy_role_document" {
+  statement {
+    sid     = "1"
+    actions = ["sts:AssumeRole"]
 
-#     principals {
-#       type        = "Service"
-#       identifiers = ["vpc-flow-logs.amazonaws.com"]
-#     }
-#   }
-# }
+    principals {
+      type        = "Service"
+      identifiers = ["vpc-flow-logs.amazonaws.com"]
+    }
+  }
+}
 
-# resource "aws_iam_role" "vpc_flowlogs_role" {
-#   name               = "vpc-flowlog-role-${var.identifier}"
-#   assume_role_policy = data.aws_iam_policy_document.policy_role_document.json
-# }
+resource "aws_iam_role" "vpc_flowlogs_role" {
+  name               = "vpc-flowlog-role-${var.identifier}"
+  assume_role_policy = data.aws_iam_policy_document.policy_role_document.json
+}
 
-# # IAM Role Policy
-# data "aws_iam_policy_document" "policy_rolepolicy_document" {
-#   statement {
-#     sid = "2"
-#     actions = [
-#       "logs:CreateLogGroup",
-#       "logs:CreateLogStream",
-#       "logs:PutLogEvents",
-#       "logs:DescribeLogGroup",
-#       "logs:DescribeLogStreams"
-#     ]
-#     resources = ["arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"]
-#   }
-# }
+# IAM Role Policy
+data "aws_iam_policy_document" "policy_rolepolicy_document" {
+  statement {
+    sid = "2"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:DescribeLogGroup",
+      "logs:DescribeLogStreams"
+    ]
+    resources = ["arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"]
+  }
+}
 
-# resource "aws_iam_role_policy" "vpc_flowlogs_role_policy" {
-#   name   = "vpc-flowlog-role-policy-${var.identifier}"
-#   role   = aws_iam_role.vpc_flowlogs_role.id
-#   policy = data.aws_iam_policy_document.policy_rolepolicy_document.json
-# }
+resource "aws_iam_role_policy" "vpc_flowlogs_role_policy" {
+  name   = "vpc-flowlog-role-policy-${var.identifier}"
+  role   = aws_iam_role.vpc_flowlogs_role.id
+  policy = data.aws_iam_policy_document.policy_rolepolicy_document.json
+}
 
 # EC2 IAM ROLE - SSM and S3 access
 # IAM instance profile

@@ -72,6 +72,14 @@ module "spoke_vpcs" {
       transit_gateway_default_route_table_propagation = false
     }
   }
+
+  vpc_flow_logs = {
+    iam_role_arn = module.iam_kms.vpc_flowlog_role
+    kms_key_arn  = module.iam_kms.kms_arn
+
+    log_destination_type = "cloud-watch-logs"
+    retention_in_days    = 7
+  }
 }
 
 # EC2 Instances (1 instance in each private subnet per Spoke VPC created)
