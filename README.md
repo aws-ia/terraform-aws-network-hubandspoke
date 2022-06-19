@@ -24,7 +24,7 @@ By default, the AWS Transit Gateway is the only resource it will be created - no
     - `resource_share`                 = (Optional|Bool) Whether the Transit Gateway is shared via Resource Access Manager or not. Valid values: `false`, `true`. Default value: `false`.
     - `tags`                           = (Optional|map(string)) Tags to apply to the Transit Gateway.
 
-- `central_vpcs`= (Optional|string) = To configure all the Central VPCs - used to centralized different services. You can create the following Central VPCs:
+- `central_vpcs`= (Optional|any) To configure all the Central VPCs - used to centralized different services. You can create the following Central VPCs:
     - `inspection`      = To centralize the traffic inspection. If created, all the traffic between Spoke VPCs (East/West) and to the Internet (North/South) will be passed to this VPC. You can create Internet access in this VPC, if no Egress VPC is created.
     - `egress`          = To centralize Internet access. You cannot create an Egress VPC and an Inspection VPC with Internet access at the same time.
     - `shared_services` = To centralize VPC endpoint access. This VPC won't have Internet access, and its TGW attachment will be propaged directly to the Spoke TGW Route Table directly.
@@ -32,6 +32,11 @@ By default, the AWS Transit Gateway is the only resource it will be created - no
     - `hybrid_dns`      = To centralize Hybrid DNS configuration (Route 53 Resolver endpoints or a 3rd-party solution) outside of the Shared Services VPC. This VPC won't have Internet access, and its TGW attachment will be propaged directly to the Spoke TGW Route Table directly.  
 
 You can check below the input format to define the different Central VPCs, and the differences between them when defining its subnets. Note that the services to place in the VPCs (firewall endpoints, VPC endpoints, instances, etc.) are not created, leaving you the freedom to place whatever you want once the infrastructure is created. Same about IAM roles or KMS Keys, if you want to enable logging in the VPCs created, you will need to create these resources first and provide the ID/ARN in the module variables.
+
+- `spoke_vpcs` = (Optional|any) It is out of the scope of this module the creation of the Spoke VPCs - from the subnet/routing definition to the attachment to the Transit Gateway. We recommend the use of the following [AWS VPC Module](https://registry.terraform.io/modules/aws-ia/vpc/aws/latest) to simplify the creation of the VPCs, and the attachments to the Transit Gateway. However, to configure all the Transit Gateway routing (and also the VPC routing of the Central VPCs), the following attributes from the Spoke VPCs can be defined:
+    - `number_spokes`   = (Optional|Int) **If set need to be greater than 0**. The number of Spoke VPCs attached to the Transit Gateway.
+    - `cidrs_list`      = (Optional|list(string)) List of the CIDR blocks of all the VPCs attached to the Transit Gateway. The list of CIDR blocks will be used in the Central VPCs to route to the Transit Gateway - in those VPCs that have already a route to the Internet (0.0.0.0/0). If not specified, no routes will be created and you will need to create them outside this module.
+    - `vpc_attachments` = (Optional|list(string)) List of Spoke VPC Transit Gateway attachments. The VPC attachments will be associated to the Spoke TGW Route Table, and propagated to the corresponding Central TGW Route Tables.
 
 ### Central VPCs
 
@@ -271,14 +276,6 @@ central_vpcs = {
     }
   }
 ```
-
-### Spoke VPCs
-
-It is out of the scope of this module the creation of the Spoke VPCs - from the subnet/routing definition to the attachment to the Transit Gateway. We recommend the use of the following [AWS VPC Module](https://registry.terraform.io/modules/aws-ia/vpc/aws/latest) to simplify the creation of the VPCs, and the attachments to the Transit Gateway. To configure all the Transit Gateway routing (and also the VPC routing of the Central VPCs), the following attributes can be defined:
-
-- `number_spokes`   = (Optional|Int) **If set need to be greater than 0**. The number of Spoke VPCs attached to the Transit Gateway.
-- `cidrs_list`      = (Optional|list(string)) List of the CIDR blocks of all the VPCs attached to the Transit Gateway. The list of CIDR blocks will be used in the Central VPCs to route to the Transit Gateway - in those VPCs that have already a route to the Internet (0.0.0.0/0). If not specified, no routes will be created and you will need to create them outside this module.
-- `vpc_attachments` = (Optional|list(string)) List of Spoke VPC Transit Gateway attachments. The VPC attachments will be associated to the Spoke TGW Route Table, and propagated to the corresponding Central TGW Route Tables.
 
 ### Examples
 
