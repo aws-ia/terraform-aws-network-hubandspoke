@@ -28,7 +28,7 @@ module "central_vpcs" {
   for_each = var.central_vpcs
 
   source  = "aws-ia/vpc/aws"
-  version = "= 1.4.0"
+  version = "= 1.4.1"
 
   name               = try(each.value.name, each.key)
   vpc_id             = try(each.value.vpc_id, null)

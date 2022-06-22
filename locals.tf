@@ -122,6 +122,7 @@ locals {
           transit_gateway_id                              = local.transit_gateway_id
           transit_gateway_default_route_table_association = false
           transit_gateway_default_route_table_propagation = false
+          transit_gateway_appliance_mode_support          = "enable"
           tags                                            = {}
         },
         try(var.central_vpcs.inspection.subnets.transit_gateway, {})
@@ -143,6 +144,7 @@ locals {
           transit_gateway_id                              = local.transit_gateway_id
           transit_gateway_default_route_table_association = false
           transit_gateway_default_route_table_propagation = false
+          transit_gateway_appliance_mode_support          = "enable"
           tags                                            = {}
         },
         try(var.central_vpcs.inspection.subnets.transit_gateway, {})
