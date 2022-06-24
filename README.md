@@ -7,7 +7,9 @@ This Terraform module helps you create the base of your networking infrastructur
 
 ## Architecture
 
-![Architecture diagram](https://github.com/aws-ia/terraform-aws-network-hubandspoke/blob/346b078adc3fc6ace62de2ba216a9ef92666b71b/images/architecture_diagram.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/aws-ia/terraform-aws-network-hubandspoke/main/images/architecture_diagram.png" alt="Simple" width="100%">
+</p>
 
 ## Usage
 
