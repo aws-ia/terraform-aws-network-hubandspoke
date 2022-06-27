@@ -5,15 +5,22 @@
 
 # ---------------- AWS TRANSIT GATEWAY ----------------
 resource "aws_ec2_transit_gateway" "tgw" {
-  count = try(var.transit_gateway.id, "none") == "none" ? 0 : 1
+  count = try(var.transit_gateway.configuration, "none") == "none" ? 0 : 1
 
   description                     = "Transit_Gateway-${var.identifier}"
+  amazon_side_asn                 = try(var.transit_gateway.configuration.amazon_side_asn, 64512)
+  auto_accept_shared_attachments  = try(var.transit_gateway.configuration.auto_accept_shared_attachments, "disable")
   default_route_table_association = "disable"
   default_route_table_propagation = "disable"
+  dns_support                     = try(var.transit_gateway.configuration.dns_support, "enable")
+  vpn_ecmp_support                = try(var.transit_gateway.configuration.vpn_ecmp_support, "enable")
 
-  tags = {
-    Name = var.transit_gateway.name
-  }
+  tags = merge(
+    {
+      Name = var.transit_gateway.configuration.name
+    },
+    try(var.transit_gateway.configuration.tags, {})
+  )
 }
 
 # ---------------- CENTRAL VPCs ----------------
@@ -21,7 +28,7 @@ module "central_vpcs" {
   for_each = var.central_vpcs
 
   source  = "aws-ia/vpc/aws"
-  version = "== 1.4.0"
+  version = "= 1.4.1"
 
   name               = try(each.value.name, each.key)
   vpc_id             = try(each.value.vpc_id, null)
@@ -68,7 +75,12 @@ resource "aws_ec2_transit_gateway_route_table" "spokes_tgw_rt" {
   }
 }
 
-# ASSOCIATION TO VPCS WHEN SPOKE VPCS ARE SUPPORTED
+resource "aws_ec2_transit_gateway_route_table_association" "spokes_tgw_route_table_association" {
+  count = var.spoke_vpcs.number_spokes
+
+  transit_gateway_attachment_id  = var.spoke_vpcs.vpc_attachments[count.index]
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes_tgw_rt.id
+}
 
 # ---------------------- TRANSIT GATEWAY STATIC ROUTES ----------------------
 # If both Inspection and Egress VPCs are created, the Inspection TGW Route Table will have a static route to 0.0.0.0/0 with the Egress VPC as destination
@@ -112,19 +124,44 @@ resource "aws_ec2_transit_gateway_route" "spokes_static_default_route" {
 
 # -------------------- TRANSIT GATEWAY PROPAGATED ROUTES --------------------
 # If the Inspection VPC is created and there's no Egress VPC, all the Spoke VPCs propagate to the Inspection TGW Route Table
-#  TO ADD WHEN SUPPORTING SPOKE VPCs
+resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_inspection_propagation" {
+  count = length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 1 && contains(keys(var.central_vpcs), "inspection") ? var.spoke_vpcs.number_spokes : 0
+
+  transit_gateway_attachment_id  = try(var.spoke_vpcs.vpc_attachments, [])[count.index]
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["inspection"].id
+}
 
 # If the Egress VPC is created and there's no Inspection VPC, all the Spoke VPCs propagate to the Egress TGW Route Table
-#  TO ADD WHEN SUPPORTING SPOKE VPCs
+resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_egress_propagation" {
+  count = length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 1 && contains(keys(var.central_vpcs), "egress") ? var.spoke_vpcs.number_spokes : 0
+
+  transit_gateway_attachment_id  = try(var.spoke_vpcs.vpc_attachments, [])[count.index]
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["egress"].id
+}
 
 # If the Shared Services VPC is created, all the Spokes VPCs propagate to the Shared Services TGW Route Table
-#  TO ADD WHEN SUPPORTING SPOKE VPCs
+resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_shared_services_propagation" {
+  count = contains(keys(var.central_vpcs), "shared_services") ? var.spoke_vpcs.number_spokes : 0
 
-# If there's no Inspection VPC created, all the Spoke VPCs propagate to the Ingress TGW Route Table
-#  TO ADD WHEN SUPPORTING SPOKE VPCs
+  transit_gateway_attachment_id  = try(var.spoke_vpcs.vpc_attachments, [])[count.index]
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["shared_services"].id
+}
+
+# If there's no Inspection VPC created, all the Spoke VPCs propagate to the Ingress TGW Route Table (if created)
+resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_ingress_propagation" {
+  count = length(setintersection(keys(var.central_vpcs), ["inspection", "ingress"])) == 1 && contains(keys(var.central_vpcs), "ingress") ? var.spoke_vpcs.number_spokes : 0
+
+  transit_gateway_attachment_id  = try(var.spoke_vpcs.vpc_attachments, [])[count.index]
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["ingress"].id
+}
 
 # If the Hybrid DNS VPC is created, all the Spokes VPCs propagate to the Hybrid DNS TGW Route Table
-#  TO ADD WHEN SUPPORTING SPOKE VPCs
+resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_hybrid_dns_propagation" {
+  count = contains(keys(var.central_vpcs), "hybrid_dns") ? var.spoke_vpcs.number_spokes : 0
+
+  transit_gateway_attachment_id  = try(var.spoke_vpcs.vpc_attachments, [])[count.index]
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["hybrid_dns"].id
+}
 
 # If Shared Services VPC is created, it propagates its CIDR to the Spoke VPC TGW Route Table
 resource "aws_ec2_transit_gateway_route_table_propagation" "shared_services_to_spokes_propagation" {
@@ -142,3 +179,18 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "hybrid_dns_to_spokes
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes_tgw_rt.id
 }
 
+# -------------------- FIREWALL SOLUTION  --------------------
+# AWS Network Firewall
+module "aws_network_firewall" {
+  count      = local.aws_network_firewall ? 1 : 0
+  source     = "./modules/aws_network_firewall"
+  identifier = var.identifier
+
+  firewall_configuration = var.central_vpcs.inspection.aws_network_firewall
+  inspection_vpc         = module.central_vpcs["inspection"]
+  tgw_id                 = local.transit_gateway_id
+
+  number_azs      = var.central_vpcs.inspection.az_count
+  route_to_tgw    = contains(keys(try(var.central_vpcs.inspection.subnets, {})), "public") ? local.spoke_cidrs : ["0.0.0.0/0"]
+  internet_access = contains(keys(try(var.central_vpcs.inspection.subnets, {})), "public") ? true : false
+}

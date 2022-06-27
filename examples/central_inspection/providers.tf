@@ -22,14 +22,6 @@ terraform {
 # AWS Providers configuration - AWS Region indicated in root/variables.tf
 provider "aws" {
   region = var.aws_region
-
-  default_tags {
-    tags = {
-      Module    = "hub-and-spoke-tgw"
-      Terraform = "Managed"
-      Region    = var.aws_region
-    }
-  }
 }
 
 provider "awscc" {

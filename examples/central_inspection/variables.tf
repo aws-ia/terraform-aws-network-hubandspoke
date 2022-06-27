@@ -14,3 +14,24 @@ variable "identifier" {
   description = "Project identifier."
   default     = "central-inspection"
 }
+
+variable "vpcs" {
+  type        = map(any)
+  description = "Spoke VPCs to create."
+  default = {
+    "spoke-vpc-1" = {
+      cidr_block      = "10.0.0.0/24"
+      private_subnets = ["10.0.0.0/26", "10.0.0.64/26", "10.0.0.128/26"]
+      tgw_subnets     = ["10.0.0.192/28", "10.0.0.208/28", "10.0.0.224/28"]
+      number_azs      = 2
+      instance_type   = "t2.micro"
+    }
+    "spoke-vpc-2" = {
+      cidr_block      = "10.0.1.0/24"
+      private_subnets = ["10.0.1.0/26", "10.0.1.64/26", "10.0.1.128/26"]
+      tgw_subnets     = ["10.0.1.192/28", "10.0.1.208/28", "10.0.1.224/28"]
+      number_azs      = 2
+      instance_type   = "t2.micro"
+    }
+  }
+}
