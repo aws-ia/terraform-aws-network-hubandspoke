@@ -5,15 +5,21 @@
 
 # ---------------- AWS TRANSIT GATEWAY ----------------
 resource "aws_ec2_transit_gateway" "tgw" {
-  count = try(var.transit_gateway.id, "none") == "none" ? 0 : 1
+  count = local.create_tgw ? 1 : 0
 
   description                     = "Transit_Gateway-${var.identifier}"
   default_route_table_association = "disable"
   default_route_table_propagation = "disable"
+  amazon_side_asn                 = try(var.transit_gateway.amazon_side_asn, 64512)
+  auto_accept_shared_attachments  = try(var.transit_gateway.auto_accept_shared_attachments, "disable")
+  dns_support                     = try(var.transit_gateway.dns_support, "enable")
+  multicast_support               = try(var.transit_gateway.multicast_support, "disable")
+  transit_gateway_cidr_blocks     = try(var.transit_gateway.transit_gateway_cidr_blocks, [])
+  vpn_ecmp_support                = try(var.transit_gateway.vpn_ecmp_support, "enable")
 
-  tags = {
+  tags = merge({
     Name = var.transit_gateway.name
-  }
+  }, var.transit_gateway.tags)
 }
 
 # ---------------- CENTRAL VPCs ----------------
@@ -142,3 +148,25 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "hybrid_dns_to_spokes
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes_tgw_rt.id
 }
 
+# ---------------------- PREFIX LIST - IF SUPERNET CIDR BLOCK OR PREFIX LIST IS NOT PROVIDED ----------------------
+data "aws_vpc" "spoke_vpcs" {
+  for_each = { for k, v in try(var.spoke_vpcs.vpc_information, {}) : k => v if var.create_pl }
+
+  id = each.value.vpc_id
+}
+
+resource "aws_ec2_managed_prefix_list" "network_prefix_list" {
+  count = var.create_pl ? 1 : 0
+
+  name           = "Network's Prefix List (managed by Hub and Spoke module)."
+  address_family = "IPv4"
+  max_entries    = length(keys(var.spoke_vpcs.vpc_information))
+}
+
+resource "aws_ec2_managed_prefix_list_entry" "entry" {
+  for_each = { for k, v in data.aws_vpc.spoke_vpcs : k => v if var.create_pl }
+
+  cidr           = each.value.cidr_block
+  description    = each.key
+  prefix_list_id = aws_ec2_managed_prefix_list.network_prefix_list[0].id
+}
