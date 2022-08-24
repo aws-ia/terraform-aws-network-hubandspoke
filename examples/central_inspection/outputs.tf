@@ -5,7 +5,7 @@
 
 output "transit_gateway" {
   description = "Transit Gateway ID."
-  value       = aws_ec2_transit_gateway.tgw.id
+  value       = module.hub-and-spoke.transit_gateway.id
 }
 
 output "central_vpcs" {

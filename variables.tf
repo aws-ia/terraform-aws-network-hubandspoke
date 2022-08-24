@@ -80,6 +80,12 @@ EOF
     condition     = (contains(keys(try(var.central_vpcs, {})), "egress") && !contains(keys(try(var.central_vpcs.inspection.subnets, {})), "public")) || !contains(keys(try(var.central_vpcs, {})), "egress")
   }
 
+  #  ---------------- SHARED SERVICES VPC (IF DEFINED) CANNOT HAVE A DNS SUBNET IF HYBRID DNS VPC IS DEFINED ----------------
+  validation {
+    error_message = "If you create a Shared Services and Hybrid DNS VPC at the same time, the Shared Services VPC cannot have Internet access - remove the definition of public subnet(s)."
+    condition     = (contains(keys(try(var.central_vpcs, {})), "hybrid_dns") && !contains(keys(try(var.central_vpcs.shared_services.subnets, {})), "dns")) || !contains(keys(try(var.central_vpcs, {})), "hybrid_dns")
+  }
+
   # ---------------- VALIDATION OF INSPECTION VPC ----------------
   validation {
     error_message = "Only valid key values for var.central_vpcs.inspection: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"inspection_flow\", \"aws_network_firewall\", \"vpc_flow_logs\", \"subnets\", \"tags\"."
@@ -104,7 +110,7 @@ EOF
 
   # Valid values for var.central_vpcs.inspection.inspection_flow
   validation {
-    error_messages = "Only valid definitions of Inspection Flow in var.central_vpcs.inspection: \"east-west\", \"north-south\", \"all\"."
+    error_message = "Only valid definitions of Inspection Flow in var.central_vpcs.inspection: \"east-west\", \"north-south\", \"all\"."
     condition = contains(
       ["east-west", "north-south", "all"],
       try(var.central_vpcs.inspection.inspection_flow, "all")
@@ -114,7 +120,7 @@ EOF
   # Valid keys for var.central_vpcs.inspection.aws_network_firewall
   validation {
     error_message = "Only valid key values for var.central_vpcs.inspection.aws_network_firewall: \"name\", \"policy_arn\", \"policy_change_protection\", \"subnet_change_protection\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.inspection, {})), [
+    condition = length(setsubtract(keys(try(var.central_vpcs.inspection.aws_network_firewall, {})), [
       "name",
       "policy_arn",
       "policy_change_protection",

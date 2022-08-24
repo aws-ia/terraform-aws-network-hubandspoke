@@ -16,7 +16,26 @@ locals {
 
   # ---------- AWS NETWORK FIREWALL LOCAL VARIABLES ----------
   # Boolean to indicate if a new AWS Network Firewall needs to be created or not
-  create_anfw = contains(try(var.central_vpcs.inspection, {}), "aws_network_firewall")
+  create_anfw = try(var.central_vpcs.inspection.aws_network_firewall.name, "empty") != "empty" ? true : false
+  # Boolean to indicate if we need to obtain the list of CIDR blocks from a managed prefix list provided to the module
+  prefix_list_to_cidrs = (try(var.spoke_vpcs.network_prefix_list, "empty") != "empty") && local.create_anfw && (local.inspection_configuration == "with_internet")
+  # List of network CIDR blocks to apply in Network Firewall's routing configuration
+  network_cidr_list = local.create_pl ? values({ for k, v in data.aws_vpc.spoke_vpcs : k => v.cidr_block }) : (local.network_pl ? [for entry in data.aws_ec2_managed_prefix_list.data_network_prefix_list[0].entries : entry.cidr] : [var.spoke_vpcs.network_cidr_block])
+  # Routing configuration (depending the Inspection VPC configuration)
+  anfw_routing_configuration = {
+    with_internet = {
+      centralized_inspection_with_egress = {
+        tgw_subnet_route_tables    = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.transit_gateway : k => v.id }, {})
+        public_subnet_route_tables = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.public : k => v.id }, {})
+        network_cidr_blocks        = local.network_cidr_list
+      }
+    }
+    without_internet = {
+      centralized_inspection_without_egress = {
+        tgw_subnet_route_tables = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.transit_gateway : k => v.id }, {})
+      }
+    }
+  }
 
   # ---------- SPOKE VPC LOCAL VARIABLES ----------
   # Boolean to determine if a managed prefix list should be created by the Hub and Spoke module (neither `network_cidr_block` or `network_prefix_list` have been defined)
@@ -24,7 +43,7 @@ locals {
   # Boolean to indicate if the network's route definition is done with a managed prefix list (for the Transit Gateway Route Tables)
   network_pl = local.create_pl || (try(var.spoke_vpcs.network_prefix_list, "empty") != "empty")
   # Destination route to indicate in the VPC routes or Transit Gateway Route Tables
-  network_route = local.create_pl ? aws_ec2_managed_prefix_list.network_prefix_list[0].id : (local.network_pl ? var.spoke_vpcs.network_prefix_list : var.spoke_vpc.network_cidr_block)
+  network_route = local.create_pl ? aws_ec2_managed_prefix_list.network_prefix_list[0].id : (local.network_pl ? var.spoke_vpcs.network_prefix_list : var.spoke_vpcs.network_cidr_block)
 
   # ---------- CENTRAL VPC LOCAL VARIABLES ----------
   # Inspection / Shared Services VPC configuration
