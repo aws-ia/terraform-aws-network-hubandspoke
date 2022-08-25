@@ -48,7 +48,7 @@ locals {
   # ---------- TRANSIT GATEWAY ROUTING LOCAL VARIABLES ----------
   # Inspection Flow - "all", "east-west", "north-south". By default: "all"
   inspection_flow = try(var.central_vpcs.inspection.inspection_flow, "all")
-  
+
   # Spoke VPC TGW RT: 0.0.0.0/0 to Inspection VPC
   spoke_to_inspection_default = (contains(keys(var.central_vpcs), "inspection") && !contains(keys(var.central_vpcs), "egress")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow != "east-west")
   # Spoke VPC TGW RT: 0.0.0.0/0 to Egress VPC
@@ -67,6 +67,12 @@ locals {
   # Spoke VPCs Propagate to Ingress TGW RT
   spoke_to_ingress_propagation = (contains(keys(var.central_vpcs), "ingress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "ingress"])) == 2) && local.inspection_flow == "east-west")
 
+  # Map with all the Spoke VPCs (independently of the segment)
+  transit_gateway_attachment_ids = merge([
+    for k, vpc in try(var.spoke_vpcs.vpc_information, {}) : {
+      for name, info in vpc : name => info.transit_gateway_attachment_id
+    }
+  ]...)
 
   # ---------- CENTRAL VPC LOCAL VARIABLES ----------
   # Inspection / Shared Services VPC configuration

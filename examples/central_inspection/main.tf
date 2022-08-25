@@ -41,16 +41,16 @@ module "hub-and-spoke" {
   spoke_vpcs = {
     network_prefix_list = aws_ec2_managed_prefix_list.network_prefix_list.id
     vpc_information = {
-      production = { 
-        for k, v in module.spoke_vpcs: k => {
-          vpc_id = v.vpc_attributes.id
+      production = {
+        for k, v in module.spoke_vpcs : k => {
+          vpc_id                        = v.vpc_attributes.id
           transit_gateway_attachment_id = v.transit_gateway_attachment_id
         }
         if var.spoke_vpcs[k].type == "production"
       }
       nonproduction = {
-        for k, v in module.spoke_vpcs: k => {
-          vpc_id = v.vpc_attributes.id
+        for k, v in module.spoke_vpcs : k => {
+          vpc_id                        = v.vpc_attributes.id
           transit_gateway_attachment_id = v.transit_gateway_attachment_id
         }
         if var.spoke_vpcs[k].type == "nonproduction"

@@ -20,12 +20,12 @@ output "transit_gateway_route_tables" {
   description = "Transit Gateway Route Tables."
   value = {
     central_vpcs = aws_ec2_transit_gateway_route_table.tgw_route_table
-    spoke_vpcs = local.vpc_information ? { for k, v in module.spoke_vpcs: k => v.transit_gateway_spoke_rt } : null
+    spoke_vpcs   = local.vpc_information ? { for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt } : null
   }
 }
 
 # AWS NETWORK FIREWALL RESOURCE (IF CREATED)
 output "aws_network_firewall" {
   description = "AWS Network Firewall."
-  value = local.create_anfw ? module.aws_network_firewall[0].aws_network_firewall : null
+  value       = local.create_anfw ? module.aws_network_firewall[0].aws_network_firewall : null
 }
