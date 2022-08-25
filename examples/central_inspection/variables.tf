@@ -6,7 +6,7 @@
 variable "aws_region" {
   type        = string
   description = "AWS Region - to build the Hub and Spoke."
-  default     = "eu-west-2"
+  default     = "eu-west-1"
 }
 
 variable "identifier" {
@@ -20,7 +20,8 @@ variable "spoke_vpcs" {
   description = "Spoke VPCs definition."
   default = {
 
-    "spoke1" = {
+    "prod1" = {
+      type                     = "production"
       cidr_block               = "10.0.0.0/24"
       private_subnet_netmask   = 28
       tgw_subnet_netmask       = 28
@@ -28,8 +29,18 @@ variable "spoke_vpcs" {
       az_count                 = 2
       instance_type            = "t2.micro"
     }
-    "spoke2" = {
+    "prod2" = {
+      type                     = "production"
       cidr_block               = "10.0.1.0/24"
+      private_subnet_netmask   = 28
+      tgw_subnet_netmask       = 28
+      endpoints_subnet_netmask = 28
+      az_count                 = 2
+      instance_type            = "t2.micro"
+    }
+    "nonprod1" = {
+      type                     = "nonproduction"
+      cidr_block               = "10.1.0.0/24"
       private_subnet_netmask   = 28
       tgw_subnet_netmask       = 28
       endpoints_subnet_netmask = 28

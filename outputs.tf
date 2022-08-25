@@ -15,14 +15,17 @@ output "central_vpcs" {
   value       = module.central_vpcs
 }
 
-# TRANSIT GATEWAY CENTRAL VPCs ROUTE TABLES
-output "tgw_rt_central_vpcs" {
-  description = "Transit Gateway Route Tables associated to the Central VPC attachments."
-  value       = aws_ec2_transit_gateway_route_table.tgw_route_table
+# TRANSIT GATEWAY ROUTE TABLES
+output "transit_gateway_route_tables" {
+  description = "Transit Gateway Route Tables."
+  value = {
+    central_vpcs = aws_ec2_transit_gateway_route_table.tgw_route_table
+    spoke_vpcs = local.vpc_information ? { for k, v in module.spoke_vpcs: k => v.transit_gateway_spoke_rt } : null
+  }
 }
 
-# TRANSIT GATEWAY SPOKE VPC ROUTE TABLE
-output "tgw_rt_spoke_vpc" {
-  description = "Transit Gateway Route Table associated to the Spoke VPCs."
-  value       = aws_ec2_transit_gateway_route_table.spokes_tgw_rt
+# AWS NETWORK FIREWALL RESOURCE (IF CREATED)
+output "aws_network_firewall" {
+  description = "AWS Network Firewall."
+  value = local.create_anfw ? module.aws_network_firewall[0].aws_network_firewall : null
 }

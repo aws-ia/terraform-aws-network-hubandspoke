@@ -20,7 +20,7 @@ locals {
   # Boolean to indicate if we need to obtain the list of CIDR blocks from a managed prefix list provided to the module
   prefix_list_to_cidrs = (try(var.spoke_vpcs.network_prefix_list, "empty") != "empty") && local.create_anfw && (local.inspection_configuration == "with_internet")
   # List of network CIDR blocks to apply in Network Firewall's routing configuration
-  network_cidr_list = local.create_pl ? values({ for k, v in data.aws_vpc.spoke_vpcs : k => v.cidr_block }) : (local.network_pl ? [for entry in data.aws_ec2_managed_prefix_list.data_network_prefix_list[0].entries : entry.cidr] : [var.spoke_vpcs.network_cidr_block])
+  network_cidr_list = local.network_pl ? [for entry in data.aws_ec2_managed_prefix_list.data_network_prefix_list[0].entries : entry.cidr] : [var.spoke_vpcs.network_cidr_block]
   # Routing configuration (depending the Inspection VPC configuration)
   anfw_routing_configuration = {
     with_internet = {
@@ -38,12 +38,35 @@ locals {
   }
 
   # ---------- SPOKE VPC LOCAL VARIABLES ----------
-  # Boolean to determine if a managed prefix list should be created by the Hub and Spoke module (neither `network_cidr_block` or `network_prefix_list` have been defined)
-  create_pl = length(setintersection(keys(var.spoke_vpcs), ["network_cidr_block", "network_prefix_list"])) == 0 ? true : false
+  # Boolean to indicate if any VPC Information has been provided (aside the Network's CIDR / Prefix List)
+  vpc_information = length(keys(try(var.spoke_vpcs.vpc_information, {}))) > 0 ? true : false
   # Boolean to indicate if the network's route definition is done with a managed prefix list (for the Transit Gateway Route Tables)
-  network_pl = local.create_pl || (try(var.spoke_vpcs.network_prefix_list, "empty") != "empty")
+  network_pl = try(var.spoke_vpcs.network_prefix_list, "empty") != "empty"
   # Destination route to indicate in the VPC routes or Transit Gateway Route Tables
-  network_route = local.create_pl ? aws_ec2_managed_prefix_list.network_prefix_list[0].id : (local.network_pl ? var.spoke_vpcs.network_prefix_list : var.spoke_vpcs.network_cidr_block)
+  network_route = local.network_pl ? var.spoke_vpcs.network_prefix_list : var.spoke_vpcs.network_cidr_block
+
+  # ---------- TRANSIT GATEWAY ROUTING LOCAL VARIABLES ----------
+  # Inspection Flow - "all", "east-west", "north-south". By default: "all"
+  inspection_flow = try(var.central_vpcs.inspection.inspection_flow, "all")
+  
+  # Spoke VPC TGW RT: 0.0.0.0/0 to Inspection VPC
+  spoke_to_inspection_default = (contains(keys(var.central_vpcs), "inspection") && !contains(keys(var.central_vpcs), "egress")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow != "east-west")
+  # Spoke VPC TGW RT: 0.0.0.0/0 to Egress VPC
+  spoke_to_egress_default = (contains(keys(var.central_vpcs), "egress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow == "east-west")
+  # Spoke VPC TGW RT: Network's CIDR(s) to Inspection VPC
+  spoke_to_inspection_network = ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow == "east-west")
+  # Inspection VPC TGW RT: 0.0.0.0/0 to Egress VPC && Egress VPC TGW RT: Network's CIDR(s) to Inspection VPC
+  inspection_and_egress_routes = ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow != "east-west")
+  # Ingress VPC TGW RT: Network's CIDR(s) to Inspection VPC
+  ingress_to_inspection_network = ((length(setintersection(keys(var.central_vpcs), ["inspection", "ingress"])) == 2) && local.inspection_flow != "east-west")
+
+  # Spoke VPCs Propagate to Inspection TGW RT
+  spoke_to_inspection_propagation = contains(keys(var.central_vpcs), "inspection")
+  # Spoke VPCs Propagate to Egress TGW RT
+  spoke_to_egress_propagation = (contains(keys(var.central_vpcs), "egress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow != "north-south")
+  # Spoke VPCs Propagate to Ingress TGW RT
+  spoke_to_ingress_propagation = (contains(keys(var.central_vpcs), "ingress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "ingress"])) == 2) && local.inspection_flow == "east-west")
+
 
   # ---------- CENTRAL VPC LOCAL VARIABLES ----------
   # Inspection / Shared Services VPC configuration

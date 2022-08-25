@@ -117,6 +117,12 @@ EOF
     )
   }
 
+  # # Inspection Flow cannot be "north-south" if there's no Egress VPC and the Inspection VPC has only private subnets
+  # validation {
+  #   error_message = "No Egress VPC and Inspection VPC without public subnets, \"north-south\" inspection is not possible."
+  #   condition = 
+  # }
+
   # Valid keys for var.central_vpcs.inspection.aws_network_firewall
   validation {
     error_message = "Only valid key values for var.central_vpcs.inspection.aws_network_firewall: \"name\", \"policy_arn\", \"policy_change_protection\", \"subnet_change_protection\", \"tags\"."
@@ -219,7 +225,7 @@ variable "spoke_vpcs" {
 EOF
   type        = any
 
-  # Valid keys for var.spoke_vpcs
+  # Valid keys for var.spoke_vpcs (all the segments defined)
   validation {
     error_message = "Only valid key values for var.spoke_vpcs: \"network_cidr_block\", \"network_prefix_list\", \"vpc_information\"."
     condition = length(setsubtract(keys(var.spoke_vpcs), [
@@ -229,16 +235,25 @@ EOF
     ])) == 0
   }
 
-  # Valid keys for all the items in var.spoke_vpcs.vpc_information
+  # Either `network_cidr_block` or `network_prefix_list` should be provided
   validation {
-    error_message = "Only valid key values for items in var.spoke_vpcs.vpc_information: \"vpc_id\", \"transit_gateway_attachment_id\"."
-    condition = alltrue(
-      [
-        for vpc in try(var.spoke_vpcs.vpc_information, {}) : length(setsubtract(keys(vpc), [
-          "vpc_id",
-          "transit_gateway_attachment_id"
-        ])) == 0
-      ]
-    )
+    error_message = "You need to provide either \"network_cidr_block\" or \"network_prefix_list\"."
+    condition = length(setintersection(keys(var.spoke_vpcs), [
+      "network_cidr_block",
+      "network_prefix_list"
+    ])) == 1
   }
+
+  # Valid keys for all the items in var.spoke_vpcs.vpc_information
+  # validation {
+  #   error_message = "Only valid key values for items in each segment inside var.spoke_vpcs.vpc_information: \"vpc_id\", \"transit_gateway_attachment_id\"."
+  #   condition = alltrue(
+  #     [
+  #       for vpc in values( { for k, v in try(var.spoke_vpcs.vpc_information, {}): k => v } ) : length(setsubtract(keys(vpc), [
+  #         "vpc_id",
+  #         "transit_gateway_attachment_id"
+  #       ])) == 0
+  #     ]
+  #   )
+  # }
 }

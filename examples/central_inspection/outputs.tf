@@ -8,17 +8,23 @@ output "transit_gateway" {
   value       = module.hub-and-spoke.transit_gateway.id
 }
 
-output "central_vpcs" {
-  description = "Central VPCs created (ID)."
-  value       = { for k, v in module.hub-and-spoke.central_vpcs : k => v.vpc_attributes.id }
+output "vpcs" {
+  description = "VPCs created."
+  value = {
+    central_vpcs = { for k, v in module.hub-and-spoke.central_vpcs : k => v.vpc_attributes.id }
+    spoke_vpcs = { for k, v in module.spoke_vpcs: k => v.vpc_attributes.id }
+  }
 }
 
-output "tgw_rt_central_vpcs" {
-  description = "Transit Gateway Route Tables associated to Central VPC attachments."
-  value       = { for k, v in module.hub-and-spoke.tgw_rt_central_vpcs : k => v.id }
+output "transit_gateway_route_tables" {
+  description = "Transit Gateway Route Tables."
+  value = {
+    central_vpcs = { for k, v in module.hub-and-spoke.transit_gateway_route_tables.central_vpcs: k => v.id }
+    spoke_vpcs = { for k, v in module.hub-and-spoke.transit_gateway_route_tables.spoke_vpcs: k => v.id }
+  }
 }
 
-output "tgw_rt_spoke_vpcs" {
-  description = "Transit Gateway Route Table associated to the Spoke VPC attachments."
-  value       = module.hub-and-spoke.tgw_rt_spoke_vpc.id
+output "network_firewall" {
+  description = "AWS Network Firewall ID."
+  value = module.hub-and-spoke.aws_network_firewall.id
 }
