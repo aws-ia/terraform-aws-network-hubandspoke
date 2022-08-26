@@ -17,10 +17,8 @@ locals {
   # ---------- AWS NETWORK FIREWALL LOCAL VARIABLES ----------
   # Boolean to indicate if a new AWS Network Firewall needs to be created or not
   create_anfw = try(var.central_vpcs.inspection.aws_network_firewall.name, "empty") != "empty" ? true : false
-  # Boolean to indicate if we need to obtain the list of CIDR blocks from a managed prefix list provided to the module
-  prefix_list_to_cidrs = (try(var.spoke_vpcs.network_prefix_list, "empty") != "empty") && local.create_anfw && (local.inspection_configuration == "with_internet")
   # List of network CIDR blocks to apply in Network Firewall's routing configuration
-  network_cidr_list = local.network_pl ? [for entry in data.aws_ec2_managed_prefix_list.data_network_prefix_list[0].entries : entry.cidr] : [var.spoke_vpcs.network_cidr_block]
+  network_cidr_list = local.network_pl ? [for entry in data.aws_ec2_managed_prefix_list.data_network_prefix_list.entries : entry.cidr] : [var.spoke_vpcs.network_cidr_block]
   # Routing configuration (depending the Inspection VPC configuration)
   anfw_routing_configuration = {
     with_internet = {
@@ -63,7 +61,7 @@ locals {
   # Spoke VPCs Propagate to Inspection TGW RT
   spoke_to_inspection_propagation = contains(keys(var.central_vpcs), "inspection")
   # Spoke VPCs Propagate to Egress TGW RT
-  spoke_to_egress_propagation = (contains(keys(var.central_vpcs), "egress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow != "north-south")
+  spoke_to_egress_propagation = (contains(keys(var.central_vpcs), "egress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow == "east-west")
   # Spoke VPCs Propagate to Ingress TGW RT
   spoke_to_ingress_propagation = (contains(keys(var.central_vpcs), "ingress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "ingress"])) == 2) && local.inspection_flow == "east-west")
   # Spoke VPCs Propagate to Spoke TGW RT
@@ -126,7 +124,6 @@ locals {
       endpoints = merge(
         {
           name_prefix              = try(var.central_vpcs.inspection.subnets.endoints.name_prefix, "inspection-vpc-endpoints")
-          connect_to_public_natgw  = false
           route_to_transit_gateway = "0.0.0.0/0"
           tags                     = try(var.central_vpcs.inspection.subnets.endpoints.tags, {})
         },
@@ -227,7 +224,6 @@ locals {
     public = merge(
       {
         name_prefix               = try(var.central_vpcs.ingress.subnets.public.name_prefix, "ingress-vpc-public")
-        nat_gateway_configuration = try(var.central_vpcs.ingress.subnets.public.nat_gateway_configuration, "none")
         route_to_transit_gateway  = local.network_route
         tags                      = try(var.central_vpcs.ingress.subnets.public.tags, {})
       },
@@ -236,7 +232,6 @@ locals {
     transit_gateway = merge(
       {
         name_prefix                                     = try(var.central_vpcs.ingress.subnets.transit_gateway.name_prefix, "ingress-vpc-tgw")
-        connect_to_public_natgw                         = false
         transit_gateway_id                              = local.transit_gateway_id
         transit_gateway_default_route_table_association = false
         transit_gateway_default_route_table_propagation = false

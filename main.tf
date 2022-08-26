@@ -113,7 +113,7 @@ resource "aws_ec2_transit_gateway_route" "spokes_to_egress_default_route" {
 resource "aws_ec2_transit_gateway_route" "spokes_to_inspection_network_route" {
   for_each = {
     for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt
-    if local.spoke_to_egress_default && !local.network_pl
+    if local.spoke_to_inspection_network && !local.network_pl
   }
 
   destination_cidr_block         = local.network_route
@@ -153,7 +153,7 @@ resource "aws_ec2_transit_gateway_route" "egress_to_inspection_network_route" {
 }
 
 resource "aws_ec2_transit_gateway_prefix_list_reference" "egress_to_inspection_network_prefix_list" {
-  count = local.inspection_and_egress_routes && !local.network_pl ? 1 : 0
+  count = local.inspection_and_egress_routes && local.network_pl ? 1 : 0
 
   prefix_list_id                 = local.network_route
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
@@ -282,7 +282,5 @@ module "aws_network_firewall" {
 # 1/ Network Firewall is deployed and,
 # 2/ The Inspection VPC has public subnets.
 data "aws_ec2_managed_prefix_list" "data_network_prefix_list" {
-  count = local.prefix_list_to_cidrs ? 1 : 0
-
   id = var.spoke_vpcs.network_prefix_list
 }
