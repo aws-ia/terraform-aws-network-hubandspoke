@@ -1,24 +1,40 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-# --- examples/central_inspection/outputs.tf ---
+# --- examples/central_shared_services/outputs.tf ---
 
 output "transit_gateway" {
   description = "Transit Gateway ID."
-  value       = module.hub-and-spoke.transit_gateway.id
+  value       = aws_ec2_transit_gateway.tgw.id
 }
 
-output "central_vpcs" {
-  description = "Central VPCs created (ID)."
-  value       = { for k, v in module.hub-and-spoke.central_vpcs : k => v.vpc_attributes.id }
+output "vpcs" {
+  description = "VPCs created."
+  value = {
+    central_vpcs = { for k, v in module.hub-and-spoke.central_vpcs : k => v.vpc_attributes.id }
+    spoke_vpcs   = { for k, v in module.spoke_vpcs : k => v.vpc_attributes.id }
+  }
 }
 
-output "tgw_rt_central_vpcs" {
-  description = "Transit Gateway Route Tables associated to Central VPC attachments."
-  value       = { for k, v in module.hub-and-spoke.tgw_rt_central_vpcs : k => v.id }
+output "transit_gateway_route_tables" {
+  description = "Transit Gateway Route Tables."
+  value = {
+    central_vpcs = { for k, v in module.hub-and-spoke.transit_gateway_route_tables.central_vpcs : k => v.id }
+    spoke_vpcs   = { for k, v in module.hub-and-spoke.transit_gateway_route_tables.spoke_vpcs : k => v.id }
+  }
 }
 
-output "tgw_rt_spoke_vpcs" {
-  description = "Transit Gateway Route Table associated to the Spoke VPC attachments."
-  value       = module.hub-and-spoke.tgw_rt_spoke_vpc.id
+output "ec2_instances" {
+  description = "EC2 instances created."
+  value       = { for k, v in module.compute : k => v.ec2_instances.*.id }
+}
+
+output "vpc_endpoints" {
+  description = "SSM VPC endpoints created."
+  value       = module.vpc_endpoints.endpoint_ids
+}
+
+output "private_hosted_zones" {
+    description = "Private Hosted Zones created."
+    value = module.phz.private_hosted_zones
 }

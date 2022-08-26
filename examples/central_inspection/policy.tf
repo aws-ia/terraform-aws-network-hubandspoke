@@ -21,10 +21,6 @@ resource "aws_networkfirewall_firewall_policy" "anfw_policy" {
       rule_order = "STRICT_ORDER"
     }
     stateful_default_actions = ["aws:drop_strict", "aws:alert_strict"]
-    # stateful_rule_group_reference {
-    #   priority     = 10
-    #   resource_arn = aws_networkfirewall_rule_group.allow_icmp.arn
-    # }
     stateful_rule_group_reference {
       priority     = 20
       resource_arn = aws_networkfirewall_rule_group.allow_domains.arn
@@ -85,32 +81,7 @@ resource "aws_networkfirewall_rule_group" "drop_remote" {
   }
 }
 
-# # Stateful Rule Group 1 - Allowing ICMP traffic
-# resource "aws_networkfirewall_rule_group" "allow_icmp" {
-#   capacity = 100
-#   name     = "allow-icmp-${var.identifier}"
-#   type     = "STATEFUL"
-#   rule_group {
-#     rule_variables {
-#       ip_sets {
-#         key = "SUPERNET"
-#         ip_set {
-#           definition = [var.supernet]
-#         }
-#       }
-#     }
-#     rules_source {
-#       rules_string = <<EOF
-#       pass icmp $SUPERNET any -> $SUPERNET any (msg: "Allowing ICMP packets"; sid:2; rev:1;)
-#       EOF
-#     }
-#     stateful_rule_options {
-#       rule_order = "STRICT_ORDER"
-#     }
-#   }
-# }
-
-# Stateful Rule Group 2 - Allowing access to .amazon.com (HTTPS)
+# Stateful Rule Group - Allowing access to .amazon.com (HTTPS)
 resource "aws_networkfirewall_rule_group" "allow_domains" {
   capacity = 100
   name     = "allow-domains-${var.identifier}"

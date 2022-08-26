@@ -15,9 +15,10 @@ module "hub-and-spoke" {
 
   central_vpcs = {
     inspection = {
-      name       = "inspection-vpc"
-      cidr_block = "10.10.0.0/24"
-      az_count   = 2
+      name            = "inspection-vpc"
+      cidr_block      = "10.10.0.0/24"
+      az_count        = 2
+      inspection_flow = "north-south"
 
       aws_network_firewall = {
         name       = "anfw-${var.identifier}"
@@ -106,10 +107,37 @@ resource "aws_ec2_managed_prefix_list_entry" "entry" {
 }
 
 # EC2 Instances (in each Spoke VPC)
+module "compute" {
+  for_each = module.spoke_vpcs
+  source   = "./modules/compute"
 
+  identifier               = var.identifier
+  vpc_name                 = each.key
+  vpc_id                   = each.value.vpc_attributes.id
+  vpc_subnets              = values({ for k, v in each.value.private_subnet_attributes_by_az : split("/", k)[1] => v.id if split("/", k)[0] == "private" })
+  number_azs               = var.spoke_vpcs[each.key].az_count
+  instance_type            = var.spoke_vpcs[each.key].instance_type
+  ec2_iam_instance_profile = module.iam.ec2_iam_instance_profile
+  ec2_security_group       = local.security_groups.instance
+}
 
 # VPC Endpoints (in each Spoke VPC)
+module "vpc_endpoints" {
+  for_each = module.spoke_vpcs
+  source   = "./modules/vpc_endpoints"
 
+  identifier               = var.identifier
+  vpc_name                 = each.key
+  vpc_id                   = each.value.vpc_attributes.id
+  vpc_subnets              = values({ for k, v in each.value.private_subnet_attributes_by_az : split("/", k)[1] => v.id if split("/", k)[0] == "endpoints" })
+  endpoints_security_group = local.security_groups.endpoints
+  endpoints_service_names   = local.endpoint_service_names
+}
 
 # IAM Resources
+module "iam" {
+  source = "./modules/iam"
+
+  identifier = var.identifier
+}
 

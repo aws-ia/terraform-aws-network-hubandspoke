@@ -28,3 +28,13 @@ output "network_firewall" {
   description = "AWS Network Firewall ID."
   value       = module.hub-and-spoke.aws_network_firewall.id
 }
+
+output "ec2_instances" {
+  description = "EC2 instances created."
+  value       = { for k, v in module.compute : k => v.ec2_instances.*.id }
+}
+
+output "vpc_endpoints" {
+  description = "SSM VPC endpoints created."
+  value       = { for k, v in module.vpc_endpoints : k => v.endpoint_ids }
+}

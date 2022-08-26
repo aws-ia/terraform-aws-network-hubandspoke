@@ -65,7 +65,7 @@ resource "aws_ec2_transit_gateway_route_table_association" "tgw_route_table_asso
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table[each.key].id
 }
 
-# --------- TRANSIT GATEWAY ROUTE TABLE, ASSOCATIONS, AND PREFIX LIST (IF APPLIES) - SPOKE VPCS ---------
+# --------- TRANSIT GATEWAY ROUTE TABLE, ASSOCATIONS, AND PROPAGATIONS (IF APPLIES) - SPOKE VPCS ---------
 module "spoke_vpcs" {
   for_each = try(var.spoke_vpcs.vpc_information, {})
   source   = "./modules/spoke_vpcs"
@@ -75,9 +75,9 @@ module "spoke_vpcs" {
 
   segment_name        = each.key
   segment_information = each.value
-}
 
-# ASSOCIATION TO VPCS WHEN SPOKE VPCS ARE SUPPORTED
+  tgw_attachment_propagation = local.spoke_to_spoke_propagation
+}
 
 # ---------------------- TRANSIT GATEWAY STATIC ROUTES ----------------------
 # Static Route (0.0.0.0/0) from Spoke VPCs to Inspection VPC if:
@@ -108,17 +108,28 @@ resource "aws_ec2_transit_gateway_route" "spokes_to_egress_default_route" {
   transit_gateway_route_table_id = each.value.id
 }
 
-# Static Route (Segment's Prefix List) from Spoke VPCs to Inspection VPC if:
+# Static Route (Network's CIDR) from Spoke VPCs to Inspection VPC if:
 # 1/ Both Inspection VPC and Egress VPC are created, and the traffic inspection is "east-west".
-resource "aws_ec2_transit_gateway_prefix_list_reference" "spokes_to_inspection_network_prefix_list" {
+resource "aws_ec2_transit_gateway_route" "spokes_to_inspection_network_route" {
   for_each = {
-    for k, v in module.spoke_vpcs : k => v
-    if local.spoke_to_inspection_network
+    for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt
+    if local.spoke_to_egress_default && !local.network_pl
   }
 
-  prefix_list_id                 = each.value.segment_prefix_list.id
+  destination_cidr_block         = local.network_route
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
-  transit_gateway_route_table_id = each.value.transit_gateway_spoke_rt.id
+  transit_gateway_route_table_id = each.value.id
+}
+
+resource "aws_ec2_transit_gateway_prefix_list_reference" "spokes_to_inspection_network_prefix_list" {
+  for_each = {
+    for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt
+    if local.spoke_to_inspection_network && local.network_pl
+  }
+
+  prefix_list_id                 = local.network_route
+  transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = each.value.id
 }
 
 # Static Route (0.0.0.0/0) from Inspection VPC to Egress VPC if:

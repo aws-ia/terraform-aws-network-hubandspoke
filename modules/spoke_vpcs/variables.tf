@@ -22,3 +22,8 @@ variable "segment_information" {
   type        = any
   description = "Information about the segment to create (CIDR block/prefix list, and Spoke VPCs information)."
 }
+
+variable "tgw_attachment_propagation" {
+  type = bool
+  description = "Boolean indicating if the Spoke VPC attachments should propagate in the Spoke TGW RT."
+}

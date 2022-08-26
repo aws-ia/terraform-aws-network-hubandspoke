@@ -66,6 +66,8 @@ locals {
   spoke_to_egress_propagation = (contains(keys(var.central_vpcs), "egress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "egress"])) == 2) && local.inspection_flow != "north-south")
   # Spoke VPCs Propagate to Ingress TGW RT
   spoke_to_ingress_propagation = (contains(keys(var.central_vpcs), "ingress") && !contains(keys(var.central_vpcs), "inspection")) || ((length(setintersection(keys(var.central_vpcs), ["inspection", "ingress"])) == 2) && local.inspection_flow == "east-west")
+  # Spoke VPCs Propagate to Spoke TGW RT
+  spoke_to_spoke_propagation = !contains(keys(var.central_vpcs), "inspection") || (contains(keys(var.central_vpcs), "inspection") && local.inspection_flow == "north-south")
 
   # Map with all the Spoke VPCs (independently of the segment)
   transit_gateway_attachment_ids = merge([
