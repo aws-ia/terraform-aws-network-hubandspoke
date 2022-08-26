@@ -8,7 +8,6 @@ module "hub-and-spoke" {
   source = "../.."
 
   identifier = var.identifier
-
   transit_gateway = {
     amazon_side_asn = 65000
   }
