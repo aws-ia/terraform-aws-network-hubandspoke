@@ -26,7 +26,7 @@ output "transit_gateway_route_tables" {
   description = <<-EOF
   Transit Gateway Route Tables. The format of the output is the following one:
 
-  ```hcl
+  ```
   transit_gateway_route_tables = {
     central_vpcs = {
       inspection = { ... }
