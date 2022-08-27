@@ -220,7 +220,14 @@ EOF
 # Spoke VPCs
 variable "spoke_vpcs" {
   description = <<-EOF
-  TO ADD MORE INFORMATION
+  Spoke VPCs information. You can specify the following attributes:
+  - `network_cidr_block` = (Optional|string) Network's Supernet CIDR Block. **Note** that either this attribute or `network_prefix_list` has to be defined (but not both).
+  - `network_prefix_list` = (Optional|string) Network's Prefix List ID. **Note** that either this attribute or `network_cidr_block` has to be defined (but not both).
+  - `vpc_information` = (Optional|map(any)) Information about the Spoke VPCs to add into the Hub and Spoke architecture. This variable expects a map formed by: 
+    - First, the segment of that group of VPCs. 
+    - Each segment expects a map of VPCs, which will be included in the same segment when creating the routes in the Transit Gateway.
+    - Each VPC expects a map with the following attributes: `vpc_id` and `transit_gateway_attachment_id`.
+  To get more information of the format of the variables, check the section "Spoke VPCs" in the README.
   ```
 EOF
   type        = any
