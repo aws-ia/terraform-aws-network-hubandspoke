@@ -1,48 +1,122 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-# --- examples/central_inspection/main.tf ---
+# --- examples/central_egress_ingress/main.tf ---
+
+# AWS Transit Gateway
+resource "aws_ec2_transit_gateway" "tgw" {
+
+  description                     = "Transit_Gateway-${var.identifier}"
+  default_route_table_association = "disable"
+  default_route_table_propagation = "disable"
+  amazon_side_asn                 = 64515
+
+  tags = {
+    Name = "tgw-${var.identifier}"
+  }
+}
 
 # Hub and Spoke module - we only centralize the Egress and Ingress traffic
 module "hub-and-spoke" {
   source = "../.."
 
-  aws_region = var.aws_region
   identifier = var.identifier
-
   transit_gateway = {
-    name = "tgw-${var.identifier}"
+    id = aws_ec2_transit_gateway.tgw.id
   }
 
   central_vpcs = {
     egress = {
       name       = "egress-vpc"
-      cidr_block = "10.10.0.0/16"
+      cidr_block = "10.10.0.0/24"
       az_count   = 2
 
       subnets = {
-        public = {
-          netmask = 24
-        }
-        transit_gateway = {
-          netmask = 28
-        }
+        public = { netmask = 28 }
+        transit_gateway = { netmask = 28 }
       }
     }
 
-    ingress = {
-      name       = "ingress-vpc"
-      cidr_block = "10.20.0.0/16"
-      az_count   = 2
+    # ingress = {
+    #   name       = "ingress-vpc"
+    #   cidr_block = "10.20.0.0/24"
+    #   az_count   = 2
 
-      subnets = {
-        public = {
-          netmask = 24
+    #   subnets = {
+    #     public = { netmask = 28 }
+    #     transit_gateway = { netmask = 28 }
+    #   }
+    # }
+
+    # inspection = {
+    #   name = "inspection-vpc"
+    #   cidr_block = "10.30.0.0/24"
+    #   az_count = 2
+    #   inspection_flow = "east-west"
+
+    #   subnets = {
+    #     endpoints = { netmask = 28 }
+    #     transit_gateway = { netmask = 28 }
+    #   }
+    # }
+  }
+
+  spoke_vpcs = {
+    network_prefix_list = aws_ec2_managed_prefix_list.network_prefix_list.id
+    vpc_information = {
+      production = {
+        for k, v in module.spoke_vpcs : k => {
+          vpc_id                        = v.vpc_attributes.id
+          transit_gateway_attachment_id = v.transit_gateway_attachment_id
         }
-        transit_gateway = {
-          netmask = 28
-        }
+        if var.spoke_vpcs[k].type == "production"
       }
     }
   }
+}
+
+# Spoke VPCs
+module "spoke_vpcs" {
+  for_each = var.spoke_vpcs
+
+  source  = "aws-ia/vpc/aws"
+  version = "= 2.5.0"
+
+  name       = each.key
+  cidr_block = each.value.cidr_block
+  az_count   = each.value.az_count
+
+  subnets = {
+    private = {
+      name_prefix              = "private-subnet"
+      netmask                  = each.value.private_subnet_netmask
+      route_to_transit_gateway = "0.0.0.0/0"
+    }
+    endpoints = {
+      name_prefix = "endpoints-subnet"
+      netmask     = each.value.endpoints_subnet_netmask
+    }
+    transit_gateway = {
+      name_prefix                                     = "tgw-subnet"
+      netmask                                         = each.value.tgw_subnet_netmask
+      transit_gateway_id                              = aws_ec2_transit_gateway.tgw.id
+      transit_gateway_default_route_table_association = false
+      transit_gateway_default_route_table_propagation = false
+    }
+  }
+}
+
+# Managed prefix list (to pass to the Hub and Spoke module)
+resource "aws_ec2_managed_prefix_list" "network_prefix_list" {
+  name           = "Network's Prefix List"
+  address_family = "IPv4"
+  max_entries    = length(keys(var.spoke_vpcs))
+}
+
+resource "aws_ec2_managed_prefix_list_entry" "entry" {
+  for_each = var.spoke_vpcs
+
+  cidr           = each.value.cidr_block
+  description    = "${each.value.type}-${each.key}"
+  prefix_list_id = aws_ec2_managed_prefix_list.network_prefix_list.id
 }
