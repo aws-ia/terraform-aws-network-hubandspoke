@@ -19,9 +19,8 @@ If you simply want to review the infrastructure without any workloads, remove/co
 
 ## Deployment instructions
 
-* First, you need to deploy the AWS Transit Gateway and the Managed Prefix List. When creating the VPCs (both Spoke and Central ones), Terraform needs those resources created beforehand - `terraform apply -target="module.hub-and-spoke.aws_ec2_transit_gateway.tgw" -target="aws_ec2_managed_prefix_list.network_prefix_list"`
-* Once the resources are created, you need to create the Spoke VPCs. When creating the **Hub and Spoke module**, Terraform needs the VPC attachments created beforehand - `terraform apply -target="module.spoke_vpcs"`.
-* Now, you can finish and apply the rest of the resources - `terraform apply`.
+* First, you need to deploy the AWS Transit Gateway, Managed Prefix List, and Spoke VPCs. When creating the VPCs (both Spoke and Central ones), Terraform needs those resources created beforehand - `terraform apply -target="module.hub-and-spoke.aws_ec2_transit_gateway.tgw" -target="aws_ec2_managed_prefix_list.network_prefix_list" -target="module.spoke_vpcs"`.
+* Once the resources are created, you can finish and apply the rest of the resources - `terraform apply`.
 * Once you finish your testing remember to delete the resources to avoid having unexpected charges - `terraform destroy`.
 
 ## Requirements
@@ -36,7 +35,7 @@ If you simply want to review the infrastructure without any workloads, remove/co
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 4.28.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 4.31.0 |
 
 ## Modules
 
@@ -45,7 +44,7 @@ If you simply want to review the infrastructure without any workloads, remove/co
 | <a name="module_compute"></a> [compute](#module\_compute) | ./modules/compute | n/a |
 | <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | ../.. | n/a |
 | <a name="module_iam"></a> [iam](#module\_iam) | ./modules/iam | n/a |
-| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | = 2.5.0 |
+| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | = 3.0.0 |
 | <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | ./modules/vpc_endpoints | n/a |
 
 ## Resources

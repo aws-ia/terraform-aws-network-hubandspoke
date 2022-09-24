@@ -35,6 +35,6 @@ output "vpc_endpoints" {
 }
 
 output "private_hosted_zones" {
-    description = "Private Hosted Zones created."
-    value = module.phz.private_hosted_zones
+  description = "Private Hosted Zones created."
+  value       = module.phz.private_hosted_zones
 }

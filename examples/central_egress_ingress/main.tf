@@ -20,9 +20,12 @@ resource "aws_ec2_transit_gateway" "tgw" {
 module "hub-and-spoke" {
   source = "../.."
 
-  identifier = var.identifier
-  transit_gateway = {
-    id = aws_ec2_transit_gateway.tgw.id
+  identifier         = var.identifier
+  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
+
+  network_definition = {
+    type  = "PREFIX_LIST"
+    value = aws_ec2_managed_prefix_list.network_prefix_list.id
   }
 
   central_vpcs = {
@@ -32,45 +35,30 @@ module "hub-and-spoke" {
       az_count   = 2
 
       subnets = {
-        public = { netmask = 28 }
+        public          = { netmask = 28 }
         transit_gateway = { netmask = 28 }
       }
     }
 
-    # ingress = {
-    #   name       = "ingress-vpc"
-    #   cidr_block = "10.20.0.0/24"
-    #   az_count   = 2
+    ingress = {
+      name       = "ingress-vpc"
+      cidr_block = "10.20.0.0/24"
+      az_count   = 2
 
-    #   subnets = {
-    #     public = { netmask = 28 }
-    #     transit_gateway = { netmask = 28 }
-    #   }
-    # }
-
-    # inspection = {
-    #   name = "inspection-vpc"
-    #   cidr_block = "10.30.0.0/24"
-    #   az_count = 2
-    #   inspection_flow = "east-west"
-
-    #   subnets = {
-    #     endpoints = { netmask = 28 }
-    #     transit_gateway = { netmask = 28 }
-    #   }
-    # }
+      subnets = {
+        public          = { netmask = 28 }
+        transit_gateway = { netmask = 28 }
+      }
+    }
   }
 
   spoke_vpcs = {
-    network_prefix_list = aws_ec2_managed_prefix_list.network_prefix_list.id
-    vpc_information = {
-      production = {
-        for k, v in module.spoke_vpcs : k => {
-          vpc_id                        = v.vpc_attributes.id
-          transit_gateway_attachment_id = v.transit_gateway_attachment_id
-        }
-        if var.spoke_vpcs[k].type == "production"
+    production = {
+      for k, v in module.spoke_vpcs : k => {
+        vpc_id                        = v.vpc_attributes.id
+        transit_gateway_attachment_id = v.transit_gateway_attachment_id
       }
+      if var.spoke_vpcs[k].type == "production"
     }
   }
 }
@@ -86,11 +74,15 @@ module "spoke_vpcs" {
   cidr_block = each.value.cidr_block
   az_count   = each.value.az_count
 
+  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
+  transit_gateway_routes = {
+    private = "0.0.0.0/0"
+  }
+
   subnets = {
     private = {
-      name_prefix              = "private-subnet"
-      netmask                  = each.value.private_subnet_netmask
-      route_to_transit_gateway = "0.0.0.0/0"
+      name_prefix = "private-subnet"
+      netmask     = each.value.private_subnet_netmask
     }
     endpoints = {
       name_prefix = "endpoints-subnet"
@@ -99,7 +91,6 @@ module "spoke_vpcs" {
     transit_gateway = {
       name_prefix                                     = "tgw-subnet"
       netmask                                         = each.value.tgw_subnet_netmask
-      transit_gateway_id                              = aws_ec2_transit_gateway.tgw.id
       transit_gateway_default_route_table_association = false
       transit_gateway_default_route_table_propagation = false
     }

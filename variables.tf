@@ -10,10 +10,15 @@ variable "identifier" {
 }
 
 # AWS Transit Gateway Information
-variable "transit_gateway" {
+variable "transit_gateway_id" {
+  type        = string
+  description = "Transit Gateway ID. **If you specify this value, transit_gateway_attributes can't be set**."
+  default     = null
+}
+
+variable "transit_gateway_attributes" {
   description = <<-EOF
-  Information about the Transit Gateway. You can specify the ID of a current Transit Gateway you have created, or provide the neccessary information so this module when create a new one. The following attributes can be configured:
-  - `id` = (Optional|string) **If you specify this value, no other attributes can be set** Transit Gateway ID, that the module will use as central piece of the Hub and Spoke architecture.
+  Attributes about the new Transit Gateway to create. **If you specify this value, transit_gateway_id can't be set**:
   - `name` = (Optional|string) Name to apply to the new Transit Gateway.
   - `description` = (Optional|string) Description of the Transit Gateway
   - `amazon_side_asn` = (Optional|number) Private Autonomous System Number (ASN) for the Amazon side of a BGP session. The range is `64512` to `65534` for 16-bit ASNs and `4200000000` to `4294967294` for 32-bit ASNs. It is recommended to configure one to avoid ASN overlap. Default value: `64512`.
@@ -26,11 +31,11 @@ variable "transit_gateway" {
   ```
 EOF
   type        = any
+  default     = null
 
   validation {
-    error_message = "Only valid key values for var.transit_gateway: \"id\", \"name\", \"description\", \"amazon_side_asn\", \"auto_accept_shared_attachments\", \"dns_support\", \"multicast_support\", \"transit_gateway_cidr_blocks\", \"vpc_ecmp_support\", or \"tags\"."
-    condition = length(setsubtract(keys(var.transit_gateway), [
-      "id",
+    error_message = "Only valid key values for var.transit_gateway: \"name\", \"description\", \"amazon_side_asn\", \"auto_accept_shared_attachments\", \"dns_support\", \"multicast_support\", \"transit_gateway_cidr_blocks\", \"vpc_ecmp_support\", or \"tags\"."
+    condition = length(setsubtract(keys(try(var.transit_gateway_attributes, {})), [
       "name",
       "description",
       "amazon_side_asn",
@@ -211,37 +216,35 @@ EOF
   }
 }
 
+# Network IPv4 CIDR configuration
+variable "network_definition" {
+  type = object({
+    type  = string
+    value = string
+  })
+  description = <<-EOF
+  "Definition of the IPv4 CIDR configuration. The definition is done by using two variables:"
+    - `type` = (string) Defines the type of network definition provided. It has to be either `CIDR` (Supernet's CIDR Block) or `PREFIX_LIST` (prefix list ID containing all the CIDR blocks of the network)
+    - `value` = (string) Either a Supernet's CIDR Block or a prefix list ID. This value needs to be consistent with the `type` provided in this variable.
+  ```
+EOF
+
+  # Variable var.network_definition.type can only be 'CIDR' or 'PREFIX_LIST'
+  validation {
+    condition = var.network_definition.type == "CIDR" || var.network_definition.type == "PREFIX_LIST"
+    error_message = "Invalid input in var.network_definition.type, options: \"CIDR\", or \"PREFIX_LIST\"."
+  }
+}
+
 # Spoke VPCs
 variable "spoke_vpcs" {
   description = <<-EOF
-  Spoke VPCs information. You can specify the following attributes:
-  - `network_cidr_block` = (Optional|string) Network's Supernet CIDR Block. **Note** that either this attribute or `network_prefix_list` has to be defined (but not both).
-  - `network_prefix_list` = (Optional|string) Network's Prefix List ID. **Note** that either this attribute or `network_cidr_block` has to be defined (but not both).
-  - `vpc_information` = (Optional|map(any)) Information about the Spoke VPCs to add into the Hub and Spoke architecture. This variable expects a map formed by: 
-    - First, the segment of that group of VPCs. 
-    - Each segment expects a map of VPCs, which will be included in the same segment when creating the routes in the Transit Gateway.
-    - Each VPC expects a map with the following attributes: `vpc_id` and `transit_gateway_attachment_id`.
+  Variable is used to provide the Hub and Spoke module the neccessary information about the Spoke VPCs created. Within this variable, a map of routing domains is expected. The *key* of each map will defined that specific routing domain (e.g. prod, nonprod, etc.) and a Transit Gateway Route Table for that routing domain will be created. Inside each routing domain definition, you can define a map of VPCs with the following attributes:
+    - `vpc_id` = (Optional|string) VPC ID. *This value is not used in this version of the module, we keep it as placehoder when adding support for centralized VPC endpoints*.
+    - `transit_gateway_attachment_id` = (Optional|string) Transit Gateway VPC attachment ID.
   To get more information of the format of the variables, check the section "Spoke VPCs" in the README.
   ```
 EOF
   type        = any
-
-  # Valid keys for var.spoke_vpcs (all the segments defined)
-  validation {
-    error_message = "Only valid key values for var.spoke_vpcs: \"network_cidr_block\", \"network_prefix_list\", \"vpc_information\"."
-    condition = length(setsubtract(keys(var.spoke_vpcs), [
-      "network_cidr_block",
-      "network_prefix_list",
-      "vpc_information"
-    ])) == 0
-  }
-
-  # Either `network_cidr_block` or `network_prefix_list` should be provided
-  validation {
-    error_message = "You need to provide either \"network_cidr_block\" or \"network_prefix_list\"."
-    condition = length(setintersection(keys(var.spoke_vpcs), [
-      "network_cidr_block",
-      "network_prefix_list"
-    ])) == 1
-  }
+  default     = null
 }

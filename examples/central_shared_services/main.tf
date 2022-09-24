@@ -20,9 +20,12 @@ resource "aws_ec2_transit_gateway" "tgw" {
 module "hub-and-spoke" {
   source = "../.."
 
-  identifier = var.identifier
-  transit_gateway = {
-    id = aws_ec2_transit_gateway.tgw.id
+  identifier         = var.identifier
+  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
+
+  network_definition = {
+    type  = "CIDR"
+    value = "10.0.0.0/14"
   }
 
   central_vpcs = {
@@ -43,30 +46,26 @@ module "hub-and-spoke" {
   }
 
   spoke_vpcs = {
-    network_cidr_block = "10.0.0.0/14"
-    vpc_information = {
-      production = {
-        for k, v in module.spoke_vpcs : k => {
-          vpc_id                        = v.vpc_attributes.id
-          transit_gateway_attachment_id = v.transit_gateway_attachment_id
-        }
-        if var.spoke_vpcs[k].type == "production"
+    production = {
+      for k, v in module.spoke_vpcs : k => {
+        vpc_id                        = v.vpc_attributes.id
+        transit_gateway_attachment_id = v.transit_gateway_attachment_id
       }
-      development = {
-        for k, v in module.spoke_vpcs : k => {
-          vpc_id                        = v.vpc_attributes.id
-          transit_gateway_attachment_id = v.transit_gateway_attachment_id
-        }
-        if 
-        var.spoke_vpcs[k].type == "development"
+      if var.spoke_vpcs[k].type == "production"
+    }
+    development = {
+      for k, v in module.spoke_vpcs : k => {
+        vpc_id                        = v.vpc_attributes.id
+        transit_gateway_attachment_id = v.transit_gateway_attachment_id
       }
-      testing = {
-        for k, v in module.spoke_vpcs : k => {
-          vpc_id                        = v.vpc_attributes.id
-          transit_gateway_attachment_id = v.transit_gateway_attachment_id
-        }
-        if var.spoke_vpcs[k].type == "testing"
+      if var.spoke_vpcs[k].type == "development"
+    }
+    testing = {
+      for k, v in module.spoke_vpcs : k => {
+        vpc_id                        = v.vpc_attributes.id
+        transit_gateway_attachment_id = v.transit_gateway_attachment_id
       }
+      if var.spoke_vpcs[k].type == "testing"
     }
   }
 }
@@ -82,16 +81,19 @@ module "spoke_vpcs" {
   cidr_block = each.value.cidr_block
   az_count   = each.value.az_count
 
+  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
+  transit_gateway_routes = {
+    private = "0.0.0.0/0"
+  }
+
   subnets = {
     private = {
-      name_prefix              = "private-subnet"
-      netmask                  = each.value.private_subnet_netmask
-      route_to_transit_gateway = "0.0.0.0/0"
+      name_prefix = "private-subnet"
+      netmask     = each.value.private_subnet_netmask
     }
     transit_gateway = {
       name_prefix                                     = "tgw-subnet"
       netmask                                         = each.value.tgw_subnet_netmask
-      transit_gateway_id                              = aws_ec2_transit_gateway.tgw.id
       transit_gateway_default_route_table_association = false
       transit_gateway_default_route_table_propagation = false
     }
@@ -115,22 +117,22 @@ module "compute" {
 
 # VPC Endpoints (in Shared Services VPC)
 module "vpc_endpoints" {
-  source   = "./modules/vpc_endpoints"
+  source = "./modules/vpc_endpoints"
 
   identifier               = var.identifier
   vpc_name                 = "shared_services"
   vpc_id                   = module.hub-and-spoke.central_vpcs["shared_services"].vpc_attributes.id
   vpc_subnets              = values({ for k, v in module.hub-and-spoke.central_vpcs["shared_services"].private_subnet_attributes_by_az : split("/", k)[1] => v.id if split("/", k)[0] == "endpoints" })
   endpoints_security_group = local.security_groups.endpoints
-  endpoints_service_names   = local.endpoint_service_names
+  endpoints_service_names  = local.endpoint_service_names
 }
 
 # Private Hosted Zones
 module "phz" {
   source = "./modules/phz"
 
-  vpc_ids = { for k, v in module.spoke_vpcs: k => v.vpc_attributes.id }
-  endpoint_dns = module.vpc_endpoints.endpoint_dns
+  vpc_ids                = { for k, v in module.spoke_vpcs : k => v.vpc_attributes.id }
+  endpoint_dns           = module.vpc_endpoints.endpoint_dns
   endpoint_service_names = local.endpoint_service_names
 }
 

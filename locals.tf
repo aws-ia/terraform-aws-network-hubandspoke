@@ -6,8 +6,46 @@
 locals {
   # ---------- TRANSIT GATEWAY LOCAL VARIABLES ----------
   # Boolean to indicate if a new Transit Gateway needs to be created or not
-  create_tgw         = try(var.transit_gateway.id, "create") == "create" ? true : false
-  transit_gateway_id = local.create_tgw ? aws_ec2_transit_gateway.tgw[0].id : var.transit_gateway.id
+  create_tgw         = var.transit_gateway_attributes != null ? true : false
+  transit_gateway_id = local.create_tgw ? aws_ec2_transit_gateway.tgw[0].id : var.transit_gateway_id
+
+  # ---------- TRANSIT GATEWAY ROUTES LOCAL VARIABLE ----------
+  # Transit Gateway routes configuration
+  transit_gateway_routes = {
+    # Inspection VPC - with our without Internet access
+    inspection = {
+      endpoints = local.inspection_configuration == "with_internet" ? var.network_definition.value : "0.0.0.0/0"
+    }
+
+    # Egress VPC
+    egress = {
+      public = var.network_definition.value
+    }
+
+    # Shared Services VPC - with or without "dns" subnets
+    shared_services = local.shared_services_tgw_route[local.shared_services_configuration]
+
+    # Ingress VPC
+    ingress = {
+      public = var.network_definition.value
+    }
+
+    # Hybrid DNS VPC
+    hybrid_dns = {
+      endpoints = "0.0.0.0/0"
+    }
+  }
+
+  # Shared Services TGW routing configuration - with our without "dns" subnets
+  shared_services_tgw_route = {
+    with_dns = {
+      endpoints = "0.0.0.0/0"
+      dns       = "0.0.0.0/0"
+    }
+    without_dns = {
+      endpoints = "0.0.0.0/0"
+    }
+  }
 
   # ---------- DEFAULT DEFINITION OF VPC FLOW LOGS (NO DESTINATION) ----------
   vpc_flow_logs_default = {
@@ -18,7 +56,7 @@ locals {
   # Boolean to indicate if a new AWS Network Firewall needs to be created or not
   create_anfw = try(var.central_vpcs.inspection.aws_network_firewall.name, "empty") != "empty" ? true : false
   # List of network CIDR blocks to apply in Network Firewall's routing configuration
-  network_cidr_list = local.network_pl ? [for entry in data.aws_ec2_managed_prefix_list.data_network_prefix_list.entries : entry.cidr] : [var.spoke_vpcs.network_cidr_block]
+  network_cidr_list = local.network_pl ? [for entry in data.aws_ec2_managed_prefix_list.data_network_prefix_list[0].entries : entry.cidr] : [var.network_definition.value]
   # Routing configuration (depending the Inspection VPC configuration)
   anfw_routing_configuration = {
     with_internet = {
@@ -36,12 +74,12 @@ locals {
   }
 
   # ---------- SPOKE VPC LOCAL VARIABLES ----------
-  # Boolean to indicate if any VPC Information has been provided (aside the Network's CIDR / Prefix List)
-  vpc_information = length(keys(try(var.spoke_vpcs.vpc_information, {}))) > 0 ? true : false
+  # Boolean to indicate if any Spoke VPC Information has been provided
+  vpc_information       = length(keys(try(var.spoke_vpcs.vpc_information, {}))) > 0 ? true : false
+  spoke_vpc_information = var.spoke_vpcs != null ? true : false
+
   # Boolean to indicate if the network's route definition is done with a managed prefix list (for the Transit Gateway Route Tables)
-  network_pl = try(var.spoke_vpcs.network_prefix_list, "empty") != "empty"
-  # Destination route to indicate in the VPC routes or Transit Gateway Route Tables
-  network_route = local.network_pl ? var.spoke_vpcs.network_prefix_list : var.spoke_vpcs.network_cidr_block
+  network_pl = var.network_definition.type == "PREFIX_LIST" ? true : false
 
   # ---------- TRANSIT GATEWAY ROUTING LOCAL VARIABLES ----------
   # Inspection Flow - "all", "east-west", "north-south". By default: "all"
@@ -69,7 +107,7 @@ locals {
 
   # Map with all the Spoke VPCs (independently of the segment)
   transit_gateway_attachment_ids = merge([
-    for k, vpc in try(var.spoke_vpcs.vpc_information, {}) : {
+    for k, vpc in try(var.spoke_vpcs, {}) : {
       for name, info in vpc : name => info.transit_gateway_attachment_id
     }
   ]...)
@@ -101,17 +139,15 @@ locals {
       )
       endpoints = merge(
         {
-          name_prefix              = try(var.central_vpcs.inspection.subnets.endpoints.name_prefix, "inspection-vpc-endpoints")
-          connect_to_public_natgw  = try(var.central_vpcs.inspection.subnets.public.nat_gateway_configuration, "all_azs") != "none" ? true : false
-          route_to_transit_gateway = local.network_route
-          tags                     = try(var.central_vpcs.inspection.subnets.endpoints.tags, {})
+          name_prefix             = try(var.central_vpcs.inspection.subnets.endpoints.name_prefix, "inspection-vpc-endpoints")
+          connect_to_public_natgw = try(var.central_vpcs.inspection.subnets.public.nat_gateway_configuration, "all_azs") != "none" ? true : false
+          tags                    = try(var.central_vpcs.inspection.subnets.endpoints.tags, {})
         },
         try(var.central_vpcs.inspection.subnets.endpoints, {})
       )
       transit_gateway = merge(
         {
           name_prefix                                     = try(var.central_vpcs.inspection.subnets.transit_gateway.name_prefix, "inspection-vpc-tgw")
-          transit_gateway_id                              = local.transit_gateway_id
           transit_gateway_default_route_table_association = false
           transit_gateway_default_route_table_propagation = false
           transit_gateway_appliance_mode_support          = "enable"
@@ -123,16 +159,14 @@ locals {
     without_internet = {
       endpoints = merge(
         {
-          name_prefix              = try(var.central_vpcs.inspection.subnets.endoints.name_prefix, "inspection-vpc-endpoints")
-          route_to_transit_gateway = "0.0.0.0/0"
-          tags                     = try(var.central_vpcs.inspection.subnets.endpoints.tags, {})
+          name_prefix = try(var.central_vpcs.inspection.subnets.endoints.name_prefix, "inspection-vpc-endpoints")
+          tags        = try(var.central_vpcs.inspection.subnets.endpoints.tags, {})
         },
         try(var.central_vpcs.inspection.subnets.endpoints, {})
       )
       transit_gateway = merge(
         {
           name_prefix                                     = try(var.central_vpcs.inspection.subnets.transit_gateway.name_prefix, "inspection-vpc-tgw")
-          transit_gateway_id                              = local.transit_gateway_id
           transit_gateway_default_route_table_association = false
           transit_gateway_default_route_table_propagation = false
           transit_gateway_appliance_mode_support          = "enable"
@@ -149,7 +183,6 @@ locals {
       {
         name_prefix               = try(var.central_vpcs.egress.subnets.public.name_prefix, "egress-vpc-public")
         nat_gateway_configuration = try(var.central_vpcs.egress.subnets.public.nat_gateway_configuration, "all_azs")
-        route_to_transit_gateway  = local.network_route
         tags                      = try(var.central_vpcs.egress.subnets.public.tags, {})
       },
       try(var.central_vpcs.egress.subnets.public, {})
@@ -158,7 +191,6 @@ locals {
       {
         name_prefix                                     = try(var.central_vpcs.egress.subnets.transit_gateway.name_prefix, "egress-vpc-tgw")
         connect_to_public_natgw                         = try(var.central_vpcs.inspection.subnets.public.nat_gateway_configuration, "all_azs") != "none" ? true : false
-        transit_gateway_id                              = local.transit_gateway_id
         transit_gateway_default_route_table_association = false
         transit_gateway_default_route_table_propagation = false
         tags                                            = try(var.central_vpcs.egress.subnets.transit_gateway.tags, {})
@@ -172,24 +204,21 @@ locals {
     with_dns = {
       endpoints = merge(
         {
-          name_prefix              = try(var.central_vpcs.shared_services.subnets.endpoints.name_prefix, "shared-services-vpc-endpoints")
-          route_to_transit_gateway = "0.0.0.0/0"
-          tags                     = try(var.central_vpcs.shared_services.subnets.endpoints.tags, {})
+          name_prefix = try(var.central_vpcs.shared_services.subnets.endpoints.name_prefix, "shared-services-vpc-endpoints")
+          tags        = try(var.central_vpcs.shared_services.subnets.endpoints.tags, {})
         },
         try(var.central_vpcs.shared_services.subnets.endpoints, {})
       )
       dns = merge(
         {
-          name_prefix              = try(var.central_vpcs.shared_services.subnets.dns.name_prefix, "shared-services-vpc-dns")
-          route_to_transit_gateway = "0.0.0.0/0"
-          tags                     = try(var.central_vpcs.shared_services.subnets.dns.tags, {})
+          name_prefix = try(var.central_vpcs.shared_services.subnets.dns.name_prefix, "shared-services-vpc-dns")
+          tags        = try(var.central_vpcs.shared_services.subnets.dns.tags, {})
         },
         try(var.central_vpcs.shared_services.subnets.dns, {})
       )
       transit_gateway = merge(
         {
           name_prefix                                     = try(var.central_vpcs.shared_services.subnets.transit_gateway.name_prefix, "shared-services-vpc-tgw")
-          transit_gateway_id                              = local.transit_gateway_id
           transit_gateway_default_route_table_association = false
           transit_gateway_default_route_table_propagation = false
           tags                                            = try(var.central_vpcs.shared_services.subnets.transit_gateway.tags, {})
@@ -200,16 +229,14 @@ locals {
     without_dns = {
       endpoints = merge(
         {
-          name_prefix              = try(var.central_vpcs.shared_services.subnets.endpoints.name_prefix, "shared-services-vpc-endpoints")
-          route_to_transit_gateway = "0.0.0.0/0"
-          tags                     = try(var.central_vpcs.shared_services.subnets.endpoints.tags, {})
+          name_prefix = try(var.central_vpcs.shared_services.subnets.endpoints.name_prefix, "shared-services-vpc-endpoints")
+          tags        = try(var.central_vpcs.shared_services.subnets.endpoints.tags, {})
         },
         try(var.central_vpcs.shared_services.subnets.endpoints, {})
       )
       transit_gateway = merge(
         {
           name_prefix                                     = try(var.central_vpcs.shared_services.subnets.transit_gateway.name_prefix, "shared-services-vpc-tgw")
-          transit_gateway_id                              = local.transit_gateway_id
           transit_gateway_default_route_table_association = false
           transit_gateway_default_route_table_propagation = false
           tags                                            = try(var.central_vpcs.shared_services.subnets.transit_gateway.tags, {})
@@ -223,16 +250,14 @@ locals {
   ingress_subnet = {
     public = merge(
       {
-        name_prefix               = try(var.central_vpcs.ingress.subnets.public.name_prefix, "ingress-vpc-public")
-        route_to_transit_gateway  = local.network_route
-        tags                      = try(var.central_vpcs.ingress.subnets.public.tags, {})
+        name_prefix = try(var.central_vpcs.ingress.subnets.public.name_prefix, "ingress-vpc-public")
+        tags        = try(var.central_vpcs.ingress.subnets.public.tags, {})
       },
       try(var.central_vpcs.ingress.subnets.public, {})
     )
     transit_gateway = merge(
       {
         name_prefix                                     = try(var.central_vpcs.ingress.subnets.transit_gateway.name_prefix, "ingress-vpc-tgw")
-        transit_gateway_id                              = local.transit_gateway_id
         transit_gateway_default_route_table_association = false
         transit_gateway_default_route_table_propagation = false
         tags                                            = try(var.central_vpcs.ingress.subnets.transit_gateway.tags, {})
@@ -245,16 +270,14 @@ locals {
   hybrid_dns_subnet = {
     endpoints = merge(
       {
-        name_prefix              = try(var.central_vpcs.hybrid_dns.subnets.endpoints.name_prefix, "hybrid-dns-endpoint")
-        route_to_transit_gateway = "0.0.0.0/0"
-        tags                     = try(var.central_vpcs.hybrid_dns.subnets.endpoints.tags, {})
+        name_prefix = try(var.central_vpcs.hybrid_dns.subnets.endpoints.name_prefix, "hybrid-dns-endpoint")
+        tags        = try(var.central_vpcs.hybrid_dns.subnets.endpoints.tags, {})
       },
       try(var.central_vpcs.hybrid_dns.subnets.endpoints, {})
     )
     transit_gateway = merge(
       {
         name_prefix                                     = try(var.central_vpcs.hybrid_dns.subnets.transit_gateway.name_prefix, "hybrid-dns-tgw")
-        transit_gateway_id                              = local.transit_gateway_id
         transit_gateway_default_route_table_association = false
         transit_gateway_default_route_table_propagation = false
         tags                                            = try(var.central_vpcs.hybrid_dns.subnets.transit_gateway.tags, {})

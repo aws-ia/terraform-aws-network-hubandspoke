@@ -24,6 +24,6 @@ variable "segment_information" {
 }
 
 variable "tgw_attachment_propagation" {
-  type = bool
+  type        = bool
   description = "Boolean indicating if the Spoke VPC attachments should propagate in the Spoke TGW RT."
 }

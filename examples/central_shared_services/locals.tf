@@ -54,22 +54,22 @@ locals {
 
   endpoint_service_names = {
     ssm = {
-      name           = "com.amazonaws.${var.aws_region}.ssm"
-      type           = "Interface"
-      private_dns    = false
-      phz_name       = "ssm.${var.aws_region}.amazonaws.com"
+      name        = "com.amazonaws.${var.aws_region}.ssm"
+      type        = "Interface"
+      private_dns = false
+      phz_name    = "ssm.${var.aws_region}.amazonaws.com"
     }
     ssmmessages = {
-      name           = "com.amazonaws.${var.aws_region}.ssmmessages"
-      type           = "Interface"
-      private_dns    = false
-      phz_name       = "ssmmessages.${var.aws_region}.amazonaws.com"
+      name        = "com.amazonaws.${var.aws_region}.ssmmessages"
+      type        = "Interface"
+      private_dns = false
+      phz_name    = "ssmmessages.${var.aws_region}.amazonaws.com"
     }
     ec2messages = {
-      name           = "com.amazonaws.${var.aws_region}.ec2messages"
-      type           = "Interface"
-      private_dns    = false
-      phz_name       = "ec2messages.${var.aws_region}.amazonaws.com"
+      name        = "com.amazonaws.${var.aws_region}.ec2messages"
+      type        = "Interface"
+      private_dns = false
+      phz_name    = "ec2messages.${var.aws_region}.amazonaws.com"
     }
   }
 }

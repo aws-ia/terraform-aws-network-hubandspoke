@@ -10,16 +10,16 @@ resource "aws_ec2_transit_gateway" "tgw" {
   description                     = "Transit_Gateway-${var.identifier}"
   default_route_table_association = "disable"
   default_route_table_propagation = "disable"
-  amazon_side_asn                 = try(var.transit_gateway.amazon_side_asn, 64512)
-  auto_accept_shared_attachments  = try(var.transit_gateway.auto_accept_shared_attachments, "disable")
-  dns_support                     = try(var.transit_gateway.dns_support, "enable")
-  multicast_support               = try(var.transit_gateway.multicast_support, "disable")
-  transit_gateway_cidr_blocks     = try(var.transit_gateway.transit_gateway_cidr_blocks, [])
-  vpn_ecmp_support                = try(var.transit_gateway.vpn_ecmp_support, "enable")
+  amazon_side_asn                 = try(var.transit_gateway_attributes.amazon_side_asn, 64512)
+  auto_accept_shared_attachments  = try(var.transit_gateway_attributes.auto_accept_shared_attachments, "disable")
+  dns_support                     = try(var.transit_gateway_attributes.dns_support, "enable")
+  multicast_support               = try(var.transit_gateway_attributes.multicast_support, "disable")
+  transit_gateway_cidr_blocks     = try(var.transit_gateway_attributes.transit_gateway_cidr_blocks, [])
+  vpn_ecmp_support                = try(var.transit_gateway_attributes.vpn_ecmp_support, "enable")
 
   tags = merge({
-    Name = try(var.transit_gateway.name, "tgw-${var.identifier}")
-  }, try(var.transit_gateway.tags, {}))
+    Name = try(var.transit_gateway_attributes.name, "tgw-${var.identifier}")
+  }, try(var.transit_gateway_attributes.tags, {}))
 }
 
 # ---------------- CENTRAL VPCs ----------------
@@ -27,7 +27,7 @@ module "central_vpcs" {
   for_each = var.central_vpcs
 
   source  = "aws-ia/vpc/aws"
-  version = "= 2.5.0"
+  version = "= 3.0.0"
 
   name               = try(each.value.name, each.key)
   vpc_id             = try(each.value.vpc_id, null)
@@ -43,6 +43,9 @@ module "central_vpcs" {
 
   vpc_flow_logs = try(each.value.vpc_flow_logs, local.vpc_flow_logs_default)
   subnets       = merge(try(each.value.subnets, {}), local.subnet_config[each.key])
+
+  transit_gateway_id     = local.transit_gateway_id
+  transit_gateway_routes = local.transit_gateway_routes[each.key]
 
   tags = try(each.value.tags, {})
 }
@@ -67,7 +70,7 @@ resource "aws_ec2_transit_gateway_route_table_association" "tgw_route_table_asso
 
 # --------- TRANSIT GATEWAY ROUTE TABLE, ASSOCATIONS, AND PROPAGATIONS (IF APPLIES) - SPOKE VPCS ---------
 module "spoke_vpcs" {
-  for_each = try(var.spoke_vpcs.vpc_information, {})
+  for_each = { for k, v in var.spoke_vpcs : k => v if local.spoke_vpc_information }
   source   = "./modules/spoke_vpcs"
 
   identifier         = var.identifier
@@ -116,7 +119,7 @@ resource "aws_ec2_transit_gateway_route" "spokes_to_inspection_network_route" {
     if local.spoke_to_inspection_network && !local.network_pl
   }
 
-  destination_cidr_block         = local.network_route
+  destination_cidr_block         = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
   transit_gateway_route_table_id = each.value.id
 }
@@ -127,7 +130,7 @@ resource "aws_ec2_transit_gateway_prefix_list_reference" "spokes_to_inspection_n
     if local.spoke_to_inspection_network && local.network_pl
   }
 
-  prefix_list_id                 = local.network_route
+  prefix_list_id                 = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
   transit_gateway_route_table_id = each.value.id
 }
@@ -147,7 +150,7 @@ resource "aws_ec2_transit_gateway_route" "inspection_to_egress_default_route" {
 resource "aws_ec2_transit_gateway_route" "egress_to_inspection_network_route" {
   count = local.inspection_and_egress_routes && !local.network_pl ? 1 : 0
 
-  destination_cidr_block         = local.network_route
+  destination_cidr_block         = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["egress"].id
 }
@@ -155,7 +158,7 @@ resource "aws_ec2_transit_gateway_route" "egress_to_inspection_network_route" {
 resource "aws_ec2_transit_gateway_prefix_list_reference" "egress_to_inspection_network_prefix_list" {
   count = local.inspection_and_egress_routes && local.network_pl ? 1 : 0
 
-  prefix_list_id                 = local.network_route
+  prefix_list_id                 = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["egress"].id
 }
@@ -165,7 +168,7 @@ resource "aws_ec2_transit_gateway_prefix_list_reference" "egress_to_inspection_n
 resource "aws_ec2_transit_gateway_route" "ingress_to_inspection_network_route" {
   count = local.ingress_to_inspection_network && !local.network_pl ? 1 : 0
 
-  destination_cidr_block         = local.network_route
+  destination_cidr_block         = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["ingress"].id
 }
@@ -173,7 +176,7 @@ resource "aws_ec2_transit_gateway_route" "ingress_to_inspection_network_route" {
 resource "aws_ec2_transit_gateway_prefix_list_reference" "ingress_to_inspection_network_prefix_list" {
   count = local.ingress_to_inspection_network && !local.network_pl ? 1 : 0
 
-  prefix_list_id                 = local.network_route
+  prefix_list_id                 = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["ingress"].id
 }
@@ -282,5 +285,7 @@ module "aws_network_firewall" {
 # 1/ Network Firewall is deployed and,
 # 2/ The Inspection VPC has public subnets.
 data "aws_ec2_managed_prefix_list" "data_network_prefix_list" {
-  id = var.spoke_vpcs.network_prefix_list
+  count = local.network_pl ? 1 : 0
+
+  id = var.network_definition.value
 }

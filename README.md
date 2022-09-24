@@ -9,9 +9,10 @@ This Terraform module helps you create the base of your networking infrastructur
 
 ### AWS Transit Gateway
 
-You can either define a current Transit Gateway (by passing its ID) or let the Hub and Spoke Module to create one for you. The attributes you can define when defining/creating a Transit Gateway are the following ones:
+You can either define a current Transit Gateway by passing its ID using the `transit_gateway_id` variable, or let the Hub and Spoke Module to create one for you by using the `transit_gateway_attributes` variable.
 
-- `id` = (Optional|string) **If you specify this value, no other attributes can be set** Transit Gateway ID, that the module will use as central piece of the Hub and Spoke architecture.
+The attributes you can define ing `transit_gateway_attributes` are the following ones:
+
 - `name` = (Optional|string) Name to apply to the new Transit Gateway.
 - `description` = (Optional|string) Description of the new Transit Gateway
 - `amazon_side_asn` = (Optional|number) Private Autonomous System Number (ASN) for the Amazon side of a BGP session. The range is `64512` to `65534` for 16-bit ASNs and `4200000000` to `4294967294` for 32-bit ASNs. It is recommended to configure one to avoid ASN overlap. Default value: `64512`.
@@ -21,6 +22,8 @@ You can either define a current Transit Gateway (by passing its ID) or let the H
 - `transit_gateway_cidr_blocks` = (Optional|list(string)) One or more IPv4/IPv6 CIDR blocks for the Transit Gateway. Must be a size /24 for IPv4 CIDRs, and /64 for IPv6 CIDRs.
 - `vpn_ecmp_support` = (Optional|string) Whever VPN ECMP support is enabled. Valid values: `disable` or `enable` (default).
 - `tags` = (Optional|map(string)) Key-value tags to apply to the Transit Gateway.
+
+**NOTE**: You can only define `transit_gateway_id` or `transit_gateway_attributes`, but not both variables at the same time.
 
 ### Central VPCs
 
@@ -292,20 +295,16 @@ central_vpcs = {
 
 ### Spoke VPCs
 
-This variable is used to provide the Hub and Spoke module the neccessary information about the Spoke VPCs created. Note that the module does not create the VPCs, and the information you pass is the Network's CIDR block, VPC IDs, and Transit Gateway VPC attachment IDs. It is recommended the use of the following [AWS VPC Module](https://github.com/aws-ia/terraform-aws-vpc) to simplify your infrastructure creation - also because the Hub and Spoke module makes use of the VPC module to create the Central VPCs. You can define the following attributes:
+This variable is used to provide the Hub and Spoke module the neccessary information about the Spoke VPCs created. Note that the module does not create the VPCs, and the information you pass is the VPC IDs, and Transit Gateway VPC attachment IDs. It is recommended the use of the following [AWS VPC Module](https://github.com/aws-ia/terraform-aws-vpc) to simplify your infrastructure creation - also because the Hub and Spoke module makes use of the VPC module to create the Central VPCs.
 
-- `network_cidr_block` = (Optional|string) Network's Supernet CIDR Block. **Note** that either this attribute or `network_prefix_list` has to be defined (but not both).
-- `network_prefix_list` = (Optional|string) Network's Prefix List ID. **Note** that either this attribute or `network_cidr_block` has to be defined (but not both).
-- `vpc_information` = (Optional|map(any)) Information about the Spoke VPCs to add into the Hub and Spoke architecture. This variable expects a map formed by:
-    - First, the segment of that group of VPCs.
-    - Each segment expects a map of VPCs, which will be included in the same segment when creating the routes in the Transit Gateway.
-    - Each VPC expects a map with the following attributes: `vpc_id` and `transit_gateway_attachment_id`.
+Within this variable, a map of routing domains is expected. The *key* of each map will defined that specific routing domain (e.g. prod, nonprod, etc.) and a Transit Gateway Route Table for that routing domain will be created. Inside each routing domain definition, you can define a map of VPCs with the following attributes:
+
+- `vpc_id` = (Optional|string) VPC ID. *This value is not used in this version of the module, we keep it as placehoder when adding support for centralized VPC endpoints*.
+- `transit_gateway_attachment_id` = (Optional|string) Transit Gateway VPC attachment ID.
 
 ```hcl
 spoke_vpcs = {
-    network_prefix_list = aws_ec2_managed_prefix_list.network_prefix_list.id
-    vpc_information = {
-      production = {
+    production = {
         prod1 = {
             vpc_id = vpc-ID1
             transit_gateway_attachment_id = tgw-attach-ID1
@@ -314,8 +313,8 @@ spoke_vpcs = {
             vpc_id = vpc-ID2
             transit_gateway_attachment_id = tgw-attach-ID2
         }
-      }
-      nonproduction = {
+    }
+    nonproduction = {
         nonprod = {
             vpc_id = vpc-ID
             transit_gateway_attachment_id = tgw-attach-ID
@@ -325,17 +324,37 @@ spoke_vpcs = {
 }
 ```
 
+### Network Definition
+
+This variable is used to define the IPv4 CIDR block(s) of all the AWS network. Two different types of definition are allowed: **CIDR** (Supernet's CIDR block) or **PREFIX\_LIST** (managed prefix list ID). The variable is an *object type*, composed by two attributes:
+
+* `type`= (string) Defines the type of network definition provided. It has to be either `CIDR` (Supernet's CIDR Block) or `PREFIX_LIST` (prefix list ID containing all the CIDR blocks of the network)
+* `value` = (string) Either a Supernet's CIDR Block or a prefix list ID. This value needs to be consistent with the `type` provided in this variable.
+
+```hcl
+network_definition = {
+    type = "PREFIX_LIST"
+    value = pl-id
+}
+```
+
+```hcl
+network_definition = {
+    type = "CIDR"
+    value = "10.0.0.0/8"
+}
+```
+
 ### Deployment Considerations
 
 #### Terraform Apply - Target
 
 Due to some limitations with Terraform, some resources need to be created beforehand (using `-target`):
 
-- AWS Transit Gateway - needed for the VPC attachments of the Central VPCs. If the Transit Gateway is created by the Hub and Spoke module, use `-target="module.{name}.aws_ec2_transit_gateway.tgw"` to create first this resource.
-- Managed Prefix List - needed for the routes created in the different Central VPCs, and aTransit Gateway Route Tables.
 - Spoke VPCs' Transit Gateway VPC attachment IDs - needed to create the Transit Gateway Route Tables (for each segment), and the Transit Gateway Associations and Propagations. To deploy everything without problems, you can proceed in two ways:
     - Do `-target` of the Transit Gateway attachments of your Spoke VPCs, and then proceed to deploy the Hub and Spoke architecture.
-    - Deploy your Spoke VPCs and Hub and Spoke module without the `vpc_information` attribute in the `spoke_vpcs` variable. Once all the resources are created, add this attribute to the definition and update the Hub and Spoke architecture (as now the TGW attachments are created).
+    - Deploy your Spoke VPCs and Hub and Spoke module without the `spoke_vpcs` variable. Once all the resources are created, add this attribute to the definition and update the Hub and Spoke architecture (as now the TGW attachments are created).
+- Managed Prefix List - if building an AWS Network Firewall resource in the Inspection VPC, as the module gets the list of CIDRs from the prefix list to create the routes to the Inspection endpoints. Terraform needs to know this value when created before creating the VPC routes.
 
 In the *./examples* folder you can find different deployment examples where you can check how you can use `-target` to deploy all the resources without problems.
 
@@ -362,7 +381,7 @@ Each Spoke VPC segment created is independent between each other, meaning that i
 | Name | Source | Version |
 |------|--------|---------|
 | <a name="module_aws_network_firewall"></a> [aws\_network\_firewall](#module\_aws\_network\_firewall) | aws-ia/networkfirewall/aws | = 0.0.1 |
-| <a name="module_central_vpcs"></a> [central\_vpcs](#module\_central\_vpcs) | aws-ia/vpc/aws | = 2.5.0 |
+| <a name="module_central_vpcs"></a> [central\_vpcs](#module\_central\_vpcs) | aws-ia/vpc/aws | = 3.0.0 |
 | <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | ./modules/spoke_vpcs | n/a |
 
 ## Resources
@@ -396,8 +415,10 @@ Each Spoke VPC segment created is independent between each other, meaning that i
 |------|-------------|------|---------|:--------:|
 | <a name="input_central_vpcs"></a> [central\_vpcs](#input\_central\_vpcs) | Configuration of the Central VPCs - used to centralized different services. You can create the following central VPCs: "inspection", "egress", "shared-services", "hybrid-dns", and "ingress".<br>In each Central VPC, You can specify the following attributes:<br>- `vpc_id` = (Optional\|string) **If you specify this value, no other attributes can be set** VPC ID, the VPC will be attached to the Transit Gateway, and its attachment associate/propagated to the corresponding TGW Route Tables.<br>- `cidr_block` = (Optional\|string) CIDR range to assign to the VPC if creating a new VPC.<br>- `az_count` = (Optional\|number) Searches the number of AZs in the region and takes a slice based on this number - the slice is sorted a-z.<br>- `vpc_enable_dns_hostnames` = (Optional\|bool) Indicates whether the instances launched in the VPC get DNS hostnames. Enabled by default.<br>- `vpc_enable_dns_support` = (Optional\|bool) Indicates whether the DNS resolution is supported for the VPC. If enabled, queries to the Amazon provided DNS server at the 169.254.169.253 IP address, or the reserved IP address at the base of the VPC network range "plus two" succeed. If disabled, the Amazon provided DNS service in the VPC that resolves public DNS hostnames to IP addresses is not enabled. Enabled by default.<br>- `vpc_instance_tenancy` = (Optional\|string) The allowed tenancy of instances launched into the VPC.<br>- `vpc_flow_logs` = (Optional\|object(any)) Configuration of the VPC Flow Logs of the VPC configured. Options: "cloudwatch", "s3", "none".<br>- `subnet_configuration` = (Optional\|any) Configuration of the subnets to create in the VPC. Depending the type of central VPC to create, the format (subnets to configure) will be different.<br>To get more information of the format of the variables, check the section "Central VPCs" in the README.<pre></pre> | `any` | n/a | yes |
 | <a name="input_identifier"></a> [identifier](#input\_identifier) | String to identify the whole Hub and Spoke environment. | `string` | n/a | yes |
-| <a name="input_spoke_vpcs"></a> [spoke\_vpcs](#input\_spoke\_vpcs) | Spoke VPCs information. You can specify the following attributes:<br>- `network_cidr_block` = (Optional\|string) Network's Supernet CIDR Block. **Note** that either this attribute or `network_prefix_list` has to be defined (but not both).<br>- `network_prefix_list` = (Optional\|string) Network's Prefix List ID. **Note** that either this attribute or `network_cidr_block` has to be defined (but not both).<br>- `vpc_information` = (Optional\|map(any)) Information about the Spoke VPCs to add into the Hub and Spoke architecture. This variable expects a map formed by: <br>  - First, the segment of that group of VPCs. <br>  - Each segment expects a map of VPCs, which will be included in the same segment when creating the routes in the Transit Gateway.<br>  - Each VPC expects a map with the following attributes: `vpc_id` and `transit_gateway_attachment_id`.<br>To get more information of the format of the variables, check the section "Spoke VPCs" in the README.<pre></pre> | `any` | n/a | yes |
-| <a name="input_transit_gateway"></a> [transit\_gateway](#input\_transit\_gateway) | Information about the Transit Gateway. You can specify the ID of a current Transit Gateway you have created, or provide the neccessary information so this module when create a new one. The following attributes can be configured:<br>- `id` = (Optional\|string) **If you specify this value, no other attributes can be set** Transit Gateway ID, that the module will use as central piece of the Hub and Spoke architecture.<br>- `name` = (Optional\|string) Name to apply to the new Transit Gateway.<br>- `description` = (Optional\|string) Description of the Transit Gateway<br>- `amazon_side_asn` = (Optional\|number) Private Autonomous System Number (ASN) for the Amazon side of a BGP session. The range is `64512` to `65534` for 16-bit ASNs and `4200000000` to `4294967294` for 32-bit ASNs. It is recommended to configure one to avoid ASN overlap. Default value: `64512`.<br>- `auto_accept_shared_attachments` = (Optional\|string) Wheter the attachment requests are automatically accepted. Valid values: `disable` (default) or `enable`.<br>- `dns_support` = (Optional\|string) Wheter DNS support is enabled. Valid values: `disable` or `enable` (default).<br>- `multicast_support` = (Optional\|string) Wheter Multicas support is enabled. Valid values: `disable` (default) or `enable`.<br>- `transit_gateway_cidr_blocks` = (Optional\|list(string)) One or more IPv4/IPv6 CIDR blocks for the Transit Gateway. Must be a size /24 for IPv4 CIDRs, and /64 for IPv6 CIDRs.<br>- `vpn_ecmp_support` = (Optional\|string) Whever VPN ECMP support is enabled. Valid values: `disable` or `enable` (default).<br>- `tags` = (Optional\|map(string)) Key-value tags to apply to the Transit Gateway.<pre></pre> | `any` | n/a | yes |
+| <a name="input_network_definition"></a> [network\_definition](#input\_network\_definition) | "Definition of the IPv4 CIDR configuration. The definition is done by using two variables:"<br>  - `type` = (string) Defines the type of network definition provided. It has to be either `CIDR` (Supernet's CIDR Block) or `PREFIX_LIST` (prefix list ID containing all the CIDR blocks of the network)<br>  - `value` = (string) Either a Supernet's CIDR Block or a prefix list ID. This value needs to be consistent with the `type` provided in this variable.<pre></pre> | <pre>object({<br>    type = string<br>    value = string<br>  })</pre> | n/a | yes |
+| <a name="input_spoke_vpcs"></a> [spoke\_vpcs](#input\_spoke\_vpcs) | Variable is used to provide the Hub and Spoke module the neccessary information about the Spoke VPCs created. Within this variable, a map of routing domains is expected. The *key* of each map will defined that specific routing domain (e.g. prod, nonprod, etc.) and a Transit Gateway Route Table for that routing domain will be created. Inside each routing domain definition, you can define a map of VPCs with the following attributes:<br>  - `vpc_id` = (Optional\|string) VPC ID. *This value is not used in this version of the module, we keep it as placehoder when adding support for centralized VPC endpoints*.<br>  - `transit_gateway_attachment_id` = (Optional\|string) Transit Gateway VPC attachment ID.<br>To get more information of the format of the variables, check the section "Spoke VPCs" in the README.<pre></pre> | `any` | `null` | no |
+| <a name="input_transit_gateway_attributes"></a> [transit\_gateway\_attributes](#input\_transit\_gateway\_attributes) | Attributes about the new Transit Gateway to create. **If you specify this value, transit\_gateway\_id can't be set**:<br>- `name` = (Optional\|string) Name to apply to the new Transit Gateway.<br>- `description` = (Optional\|string) Description of the Transit Gateway<br>- `amazon_side_asn` = (Optional\|number) Private Autonomous System Number (ASN) for the Amazon side of a BGP session. The range is `64512` to `65534` for 16-bit ASNs and `4200000000` to `4294967294` for 32-bit ASNs. It is recommended to configure one to avoid ASN overlap. Default value: `64512`.<br>- `auto_accept_shared_attachments` = (Optional\|string) Wheter the attachment requests are automatically accepted. Valid values: `disable` (default) or `enable`.<br>- `dns_support` = (Optional\|string) Wheter DNS support is enabled. Valid values: `disable` or `enable` (default).<br>- `multicast_support` = (Optional\|string) Wheter Multicas support is enabled. Valid values: `disable` (default) or `enable`.<br>- `transit_gateway_cidr_blocks` = (Optional\|list(string)) One or more IPv4/IPv6 CIDR blocks for the Transit Gateway. Must be a size /24 for IPv4 CIDRs, and /64 for IPv6 CIDRs.<br>- `vpn_ecmp_support` = (Optional\|string) Whever VPN ECMP support is enabled. Valid values: `disable` or `enable` (default).<br>- `tags` = (Optional\|map(string)) Key-value tags to apply to the Transit Gateway.<pre></pre> | `any` | `null` | no |
+| <a name="input_transit_gateway_id"></a> [transit\_gateway\_id](#input\_transit\_gateway\_id) | Transit Gateway ID. **If you specify this value, transit\_gateway\_attributes can't be set**. | `string` | `null` | no |
 
 ## Outputs
 

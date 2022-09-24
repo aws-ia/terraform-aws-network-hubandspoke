@@ -8,8 +8,15 @@ module "hub-and-spoke" {
   source = "../.."
 
   identifier = var.identifier
-  transit_gateway = {
+  transit_gateway_attributes = {
+    name            = "tgw-${var.identifier}"
+    description     = "Transit_Gateway-${var.identifier}"
     amazon_side_asn = 65000
+  }
+
+  network_definition = {
+    type  = "PREFIX_LIST"
+    value = aws_ec2_managed_prefix_list.network_prefix_list.id
   }
 
   central_vpcs = {
@@ -25,36 +32,27 @@ module "hub-and-spoke" {
       }
 
       subnets = {
-        public = {
-          netmask = 28
-        }
-        endpoints = {
-          netmask = 28
-        }
-        transit_gateway = {
-          netmask = 28
-        }
+        public          = { netmask = 28 }
+        endpoints       = { netmask = 28 }
+        transit_gateway = { netmask = 28 }
       }
     }
   }
 
   spoke_vpcs = {
-    network_prefix_list = aws_ec2_managed_prefix_list.network_prefix_list.id
-    vpc_information = {
-      production = {
-        for k, v in module.spoke_vpcs : k => {
-          vpc_id                        = v.vpc_attributes.id
-          transit_gateway_attachment_id = v.transit_gateway_attachment_id
-        }
-        if var.spoke_vpcs[k].type == "production"
+    production = {
+      for k, v in module.spoke_vpcs : k => {
+        vpc_id                        = v.vpc_attributes.id
+        transit_gateway_attachment_id = v.transit_gateway_attachment_id
       }
-      nonproduction = {
-        for k, v in module.spoke_vpcs : k => {
-          vpc_id                        = v.vpc_attributes.id
-          transit_gateway_attachment_id = v.transit_gateway_attachment_id
-        }
-        if var.spoke_vpcs[k].type == "nonproduction"
+      if var.spoke_vpcs[k].type == "production"
+    }
+    nonproduction = {
+      for k, v in module.spoke_vpcs : k => {
+        vpc_id                        = v.vpc_attributes.id
+        transit_gateway_attachment_id = v.transit_gateway_attachment_id
       }
+      if var.spoke_vpcs[k].type == "nonproduction"
     }
   }
 }
@@ -64,17 +62,21 @@ module "spoke_vpcs" {
   for_each = var.spoke_vpcs
 
   source  = "aws-ia/vpc/aws"
-  version = "= 2.5.0"
+  version = "= 3.0.0"
 
   name       = each.key
   cidr_block = each.value.cidr_block
   az_count   = each.value.az_count
 
+  transit_gateway_id = module.hub-and-spoke.transit_gateway.id
+  transit_gateway_routes = {
+    private = "0.0.0.0/0"
+  }
+
   subnets = {
     private = {
-      name_prefix              = "private-subnet"
-      netmask                  = each.value.private_subnet_netmask
-      route_to_transit_gateway = "0.0.0.0/0"
+      name_prefix = "private-subnet"
+      netmask     = each.value.private_subnet_netmask
     }
     endpoints = {
       name_prefix = "endpoints-subnet"
@@ -83,7 +85,6 @@ module "spoke_vpcs" {
     transit_gateway = {
       name_prefix                                     = "tgw-subnet"
       netmask                                         = each.value.tgw_subnet_netmask
-      transit_gateway_id                              = module.hub-and-spoke.transit_gateway.id
       transit_gateway_default_route_table_association = false
       transit_gateway_default_route_table_propagation = false
     }
@@ -130,7 +131,7 @@ module "vpc_endpoints" {
   vpc_id                   = each.value.vpc_attributes.id
   vpc_subnets              = values({ for k, v in each.value.private_subnet_attributes_by_az : split("/", k)[1] => v.id if split("/", k)[0] == "endpoints" })
   endpoints_security_group = local.security_groups.endpoints
-  endpoints_service_names   = local.endpoint_service_names
+  endpoints_service_names  = local.endpoint_service_names
 }
 
 # IAM Resources
