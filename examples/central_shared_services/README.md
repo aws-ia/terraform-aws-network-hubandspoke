@@ -18,9 +18,8 @@ If you simply want to review the infrastructure without any workloads, remove/co
 
 ## Deployment instructions
 
-* First, you need to deploy the AWS Transit Gateway. When creating the VPCs (both Spoke and Central ones), Terraform needs the resource created beforehand - `terraform apply -target="module.hub-and-spoke.aws_ec2_transit_gateway.tgw" -target="aws_ec2_managed_prefix_list.network_prefix_list"`
-* Once the resources are created, you need to create the Spoke VPCs. When creating the **Hub and Spoke module**, Terraform needs the VPC attachments created beforehand - `terraform apply -target="module.spoke_vpcs"`.
-* Now, you can finish and apply the rest of the resources - `terraform apply`.
+* First, you need to deploy the AWS Transit Gateway, and Spoke VPCs - `terraform apply -target="aws_ec2_transit_gateway.tgw" -target="module.spoke_vpcs"`.
+* Once the resources are created, you can finish and apply the rest of the resources - `terraform apply`.
 * Once you finish your testing remember to delete the resources to avoid having unexpected charges - `terraform destroy`.
 
 ## Requirements
@@ -35,7 +34,7 @@ If you simply want to review the infrastructure without any workloads, remove/co
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 4.28.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 4.32.0 |
 
 ## Modules
 
@@ -45,7 +44,7 @@ If you simply want to review the infrastructure without any workloads, remove/co
 | <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | ../.. | n/a |
 | <a name="module_iam"></a> [iam](#module\_iam) | ./modules/iam | n/a |
 | <a name="module_phz"></a> [phz](#module\_phz) | ./modules/phz | n/a |
-| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | = 2.5.0 |
+| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | = 3.0.0 |
 | <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | ./modules/vpc_endpoints | n/a |
 
 ## Resources
@@ -58,9 +57,9 @@ If you simply want to review the infrastructure without any workloads, remove/co
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS Region - to build the Hub and Spoke. | `string` | `"eu-west-1"` | no |
+| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS Region - to build the Hub and Spoke. | `string` | `"eu-west-2"` | no |
 | <a name="input_identifier"></a> [identifier](#input\_identifier) | Project identifier. | `string` | `"central-shared-services"` | no |
-| <a name="input_spoke_vpcs"></a> [spoke\_vpcs](#input\_spoke\_vpcs) | Spoke VPCs definition. | `any` | <pre>{<br>  "dev": {<br>    "az_count": 2,<br>    "cidr_block": "10.1.0.0/24",<br>    "endpoints_subnet_netmask": 28,<br>    "instance_type": "t2.micro",<br>    "private_subnet_netmask": 28,<br>    "tgw_subnet_netmask": 28,<br>    "type": "development"<br>  },<br>  "prod": {<br>    "az_count": 2,<br>    "cidr_block": "10.0.0.0/24",<br>    "endpoints_subnet_netmask": 28,<br>    "instance_type": "t2.micro",<br>    "private_subnet_netmask": 28,<br>    "tgw_subnet_netmask": 28,<br>    "type": "production"<br>  },<br>  "test": {<br>    "az_count": 2,<br>    "cidr_block": "10.2.0.0/24",<br>    "endpoints_subnet_netmask": 28,<br>    "instance_type": "t2.micro",<br>    "private_subnet_netmask": 28,<br>    "tgw_subnet_netmask": 28,<br>    "type": "testing"<br>  }<br>}</pre> | no |
+| <a name="input_spoke_vpcs"></a> [spoke\_vpcs](#input\_spoke\_vpcs) | Spoke VPCs definition. | `any` | <pre>{<br>  "dev": {<br>    "az_count": 2,<br>    "cidr_block": "10.1.0.0/24",<br>    "instance_type": "t2.micro",<br>    "private_subnet_netmask": 28,<br>    "tgw_subnet_netmask": 28,<br>    "type": "development"<br>  },<br>  "prod": {<br>    "az_count": 2,<br>    "cidr_block": "10.0.0.0/24",<br>    "instance_type": "t2.micro",<br>    "private_subnet_netmask": 28,<br>    "tgw_subnet_netmask": 28,<br>    "type": "production"<br>  },<br>  "test": {<br>    "az_count": 2,<br>    "cidr_block": "10.2.0.0/24",<br>    "instance_type": "t2.micro",<br>    "private_subnet_netmask": 28,<br>    "tgw_subnet_netmask": 28,<br>    "type": "testing"<br>  }<br>}</pre> | no |
 
 ## Outputs
 

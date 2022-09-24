@@ -6,7 +6,7 @@
 locals {
   # ---------- TRANSIT GATEWAY LOCAL VARIABLES ----------
   # Boolean to indicate if a new Transit Gateway needs to be created or not
-  create_tgw         = var.transit_gateway_attributes != null ? true : false
+  create_tgw         = try(var.transit_gateway_attributes.name, null) != null ? true : false
   transit_gateway_id = local.create_tgw ? aws_ec2_transit_gateway.tgw[0].id : var.transit_gateway_id
 
   # ---------- TRANSIT GATEWAY ROUTES LOCAL VARIABLE ----------

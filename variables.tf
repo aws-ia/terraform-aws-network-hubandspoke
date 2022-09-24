@@ -31,11 +31,11 @@ variable "transit_gateway_attributes" {
   ```
 EOF
   type        = any
-  default     = null
+  default     = {}
 
   validation {
     error_message = "Only valid key values for var.transit_gateway: \"name\", \"description\", \"amazon_side_asn\", \"auto_accept_shared_attachments\", \"dns_support\", \"multicast_support\", \"transit_gateway_cidr_blocks\", \"vpc_ecmp_support\", or \"tags\"."
-    condition = length(setsubtract(keys(try(var.transit_gateway_attributes, {})), [
+    condition = length(setsubtract(keys(var.transit_gateway_attributes), [
       "name",
       "description",
       "amazon_side_asn",
@@ -231,7 +231,7 @@ EOF
 
   # Variable var.network_definition.type can only be 'CIDR' or 'PREFIX_LIST'
   validation {
-    condition = var.network_definition.type == "CIDR" || var.network_definition.type == "PREFIX_LIST"
+    condition     = var.network_definition.type == "CIDR" || var.network_definition.type == "PREFIX_LIST"
     error_message = "Invalid input in var.network_definition.type, options: \"CIDR\", or \"PREFIX_LIST\"."
   }
 }

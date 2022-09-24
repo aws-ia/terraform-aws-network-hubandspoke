@@ -35,12 +35,8 @@ module "hub-and-spoke" {
       az_count   = 2
 
       subnets = {
-        endpoints = {
-          netmask = 28
-        }
-        transit_gateway = {
-          netmask = 28
-        }
+        endpoints       = { netmask = 28 }
+        transit_gateway = { netmask = 28 }
       }
     }
   }
@@ -75,7 +71,7 @@ module "spoke_vpcs" {
   for_each = var.spoke_vpcs
 
   source  = "aws-ia/vpc/aws"
-  version = "= 2.5.0"
+  version = "= 3.0.0"
 
   name       = each.key
   cidr_block = each.value.cidr_block

@@ -19,7 +19,7 @@ If you simply want to review the infrastructure without any workloads, remove/co
 
 ## Deployment instructions
 
-* First, you need to deploy the AWS Transit Gateway, Managed Prefix List, and Spoke VPCs. When creating the VPCs (both Spoke and Central ones), Terraform needs those resources created beforehand - `terraform apply -target="module.hub-and-spoke.aws_ec2_transit_gateway.tgw" -target="aws_ec2_managed_prefix_list.network_prefix_list" -target="module.spoke_vpcs"`.
+* First, you need to deploy the AWS Transit Gateway, Managed Prefix List, and Spoke VPCs - `terraform apply -target="module.hub-and-spoke.aws_ec2_transit_gateway.tgw" -target="aws_ec2_managed_prefix_list.network_prefix_list" -target="module.spoke_vpcs"`.
 * Once the resources are created, you can finish and apply the rest of the resources - `terraform apply`.
 * Once you finish your testing remember to delete the resources to avoid having unexpected charges - `terraform destroy`.
 
