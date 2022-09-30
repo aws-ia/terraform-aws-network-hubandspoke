@@ -1,7 +1,6 @@
 package test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/logger"
@@ -9,15 +8,10 @@ import (
 )
 
 func TestExamplesCentralInspectionEgress(t *testing.T) {
-	_region := "eu-west-1"
-
-	if os.Getenv(ENV_REGION) != "" {
-		_region = os.Getenv(ENV_REGION)
-	}
-	logger.Logf(t, "Using region %v. To override set environment variable %v", _region, ENV_REGION)
+	logger.Logf(t, "Starting test - Central Inspection (with egress)")
 
 	terraformOptions := &terraform.Options{
-		TerraformDir: "../examples/central_shared_services",
+		TerraformDir: "../examples/central_inspection",
 	}
 
 	defer terraform.Destroy(t, terraformOptions)

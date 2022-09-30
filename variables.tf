@@ -246,5 +246,5 @@ variable "spoke_vpcs" {
   ```
 EOF
   type        = any
-  default     = null
+  default     = {}
 }

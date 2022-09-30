@@ -75,7 +75,6 @@ locals {
 
   # ---------- SPOKE VPC LOCAL VARIABLES ----------
   # Boolean to indicate if any Spoke VPC Information has been provided
-  vpc_information       = length(keys(try(var.spoke_vpcs.vpc_information, {}))) > 0 ? true : false
   spoke_vpc_information = var.spoke_vpcs != null ? true : false
 
   # Boolean to indicate if the network's route definition is done with a managed prefix list (for the Transit Gateway Route Tables)
