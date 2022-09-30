@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-# --- examples/central_inspection/providers.tf ---
+# --- examples/central_egress_ingress/providers.tf ---
 
 terraform {
   required_providers {

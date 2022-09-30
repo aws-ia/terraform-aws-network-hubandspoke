@@ -1,12 +1,20 @@
 <!-- BEGIN_TF_DOCS -->
 # AWS Hub and Spoke Architecture with AWS Transit Gateway - Example: Central Egress and Ingress VPCs
 
-In this specific example, the following resources are built (all of them created by the Hub and Spoke module):
+This example builds a central Ingress and Egress VPCs. The following resources are built:
 
-- AWS Transit Gateway.
-- AWS Transit Gateway Route Tables: Egress RT, Ingress RT, Spoke RT.
-- VPCs: Egress VPC (with NAT gateways) and Ingress VPC.
-- Regarding TGW Route Tables, the Spoke RT will have a 0.0.0.0/0 route to the Egress VPC, and the Ingress and Egress RT will be empty (waiting to have Spoke VPCs to propagate their CIDR blocks)
+- Built by the **Hub and Spoke module**:
+  - AWS Transit Gateway Route Tables: 1 Ingress, 1 Egress, 1 Spokes (production).
+  - Transit Gateway routes.
+  - Ingress and Egress VPC.
+- Built outside the module:
+  - AWS Transit Gateway.
+  - Managed Prefix List
+
+## Deployment instructions
+
+* To apply all the resources - `terraform apply`.
+* Once you finish your testing remember to delete the resources to avoid having unexpected charges - `terraform destroy`.
 
 ## Requirements
 
@@ -18,7 +26,9 @@ In this specific example, the following resources are built (all of them created
 
 ## Providers
 
-No providers.
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 4.33.0 |
 
 ## Modules
 
@@ -28,7 +38,10 @@ No providers.
 
 ## Resources
 
-No resources.
+| Name | Type |
+|------|------|
+| [aws_ec2_managed_prefix_list.network_prefix_list](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_managed_prefix_list) | resource |
+| [aws_ec2_transit_gateway.tgw](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_transit_gateway) | resource |
 
 ## Inputs
 
@@ -41,8 +54,6 @@ No resources.
 
 | Name | Description |
 |------|-------------|
-| <a name="output_central_vpcs"></a> [central\_vpcs](#output\_central\_vpcs) | Central VPCs created (ID). |
-| <a name="output_tgw_rt_central_vpcs"></a> [tgw\_rt\_central\_vpcs](#output\_tgw\_rt\_central\_vpcs) | Transit Gateway Route Tables associated to Central VPC attachments. |
-| <a name="output_tgw_rt_spoke_vpcs"></a> [tgw\_rt\_spoke\_vpcs](#output\_tgw\_rt\_spoke\_vpcs) | Transit Gateway Route Table associated to the Spoke VPC attachments. |
-| <a name="output_transit_gateway"></a> [transit\_gateway](#output\_transit\_gateway) | Transit Gateway ID. |
+| <a name="output_central_vpcs"></a> [central\_vpcs](#output\_central\_vpcs) | Central VPCs created. |
+| <a name="output_transit_gateway_id"></a> [transit\_gateway\_id](#output\_transit\_gateway\_id) | ID of the AWS Transit Gateway resource. |
 <!-- END_TF_DOCS -->

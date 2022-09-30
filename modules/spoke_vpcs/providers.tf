@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-# --- root/providers.tf ---
+# --- modules/spoke_vpcs/providers.tf ---
 
 terraform {
   required_providers {
@@ -16,5 +16,4 @@ terraform {
   }
 
   required_version = ">= 0.15.0"
-  experiments      = [module_variable_optional_attrs]
 }

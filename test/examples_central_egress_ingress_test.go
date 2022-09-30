@@ -3,17 +3,15 @@ package test
 import (
 	"testing"
 
+	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 )
 
-func TestExamplesBasic(t *testing.T) {
+func TestExamplesCentralEgressIngress(t *testing.T) {
+	logger.Logf(t, "Starting test - Central Egress and Ingress")
 
 	terraformOptions := &terraform.Options{
-		TerraformDir: "../examples/basic",
-		// Vars: map[string]interface{}{
-		// 	"myvar":     "test",
-		// 	"mylistvar": []string{"list_item_1"},
-		// },
+		TerraformDir: "../examples/central_egress_ingress",
 	}
 
 	defer terraform.Destroy(t, terraformOptions)

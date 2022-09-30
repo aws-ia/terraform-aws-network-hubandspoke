@@ -6,24 +6,46 @@
 # Module identifier
 variable "identifier" {
   type        = string
-  description = "String to identify the whole Hub and Spoke Architecture"
+  description = "String to identify the whole Hub and Spoke environment."
 }
 
 # AWS Transit Gateway Information
-variable "transit_gateway" {
-  description = "Information about the Transit Gateway. Either you can specify the ID of a current Transit Gateway you created, or you specify a name and this module will proceed to create it."
-  type = object({
-    name = optional(string)
-    id   = optional(string)
-  })
+variable "transit_gateway_id" {
+  type        = string
+  description = "Transit Gateway ID. **If you specify this value, transit_gateway_attributes can't be set**."
+  default     = null
+}
 
-  default = {
-    name = "transit_gateway"
-  }
+variable "transit_gateway_attributes" {
+  description = <<-EOF
+  Attributes about the new Transit Gateway to create. **If you specify this value, transit_gateway_id can't be set**:
+  - `name` = (Optional|string) Name to apply to the new Transit Gateway.
+  - `description` = (Optional|string) Description of the Transit Gateway
+  - `amazon_side_asn` = (Optional|number) Private Autonomous System Number (ASN) for the Amazon side of a BGP session. The range is `64512` to `65534` for 16-bit ASNs and `4200000000` to `4294967294` for 32-bit ASNs. It is recommended to configure one to avoid ASN overlap. Default value: `64512`.
+  - `auto_accept_shared_attachments` = (Optional|string) Wheter the attachment requests are automatically accepted. Valid values: `disable` (default) or `enable`.
+  - `dns_support` = (Optional|string) Wheter DNS support is enabled. Valid values: `disable` or `enable` (default).
+  - `multicast_support` = (Optional|string) Wheter Multicas support is enabled. Valid values: `disable` (default) or `enable`.
+  - `transit_gateway_cidr_blocks` = (Optional|list(string)) One or more IPv4/IPv6 CIDR blocks for the Transit Gateway. Must be a size /24 for IPv4 CIDRs, and /64 for IPv6 CIDRs.
+  - `vpn_ecmp_support` = (Optional|string) Whever VPN ECMP support is enabled. Valid values: `disable` or `enable` (default).
+  - `tags` = (Optional|map(string)) Key-value tags to apply to the Transit Gateway.
+  ```
+EOF
+  type        = any
+  default     = {}
 
   validation {
-    condition     = length(setintersection(keys(var.transit_gateway), ["name", "id"])) != 1
-    error_message = "You need to define one (only) attribute: name of a new TGW, or ID of a current one."
+    error_message = "Only valid key values for var.transit_gateway: \"name\", \"description\", \"amazon_side_asn\", \"auto_accept_shared_attachments\", \"dns_support\", \"multicast_support\", \"transit_gateway_cidr_blocks\", \"vpc_ecmp_support\", or \"tags\"."
+    condition = length(setsubtract(keys(var.transit_gateway_attributes), [
+      "name",
+      "description",
+      "amazon_side_asn",
+      "auto_accept_shared_attachments",
+      "dns_support",
+      "multicast_support",
+      "transit_gateway_cidr_block",
+      "vpn_ecmp_support",
+      "tags"
+    ])) == 0
   }
 }
 
@@ -63,10 +85,15 @@ EOF
     condition     = (contains(keys(try(var.central_vpcs, {})), "egress") && !contains(keys(try(var.central_vpcs.inspection.subnets, {})), "public")) || !contains(keys(try(var.central_vpcs, {})), "egress")
   }
 
-  # ---------------- VALIDATION OF INSPECTION VPC ----------------
-  # Valid keys var.central_vpcs.inspection
+  #  ---------------- SHARED SERVICES VPC (IF DEFINED) CANNOT HAVE A DNS SUBNET IF HYBRID DNS VPC IS DEFINED ----------------
   validation {
-    error_message = "Only valid key values for central_vpcs.inspection: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"tags\"."
+    error_message = "If you create a Shared Services and Hybrid DNS VPC at the same time, the Shared Services VPC cannot have Internet access - remove the definition of public subnet(s)."
+    condition     = (contains(keys(try(var.central_vpcs, {})), "hybrid_dns") && !contains(keys(try(var.central_vpcs.shared_services.subnets, {})), "dns")) || !contains(keys(try(var.central_vpcs, {})), "hybrid_dns")
+  }
+
+  # ---------------- VALIDATION OF INSPECTION VPC ----------------
+  validation {
+    error_message = "Only valid key values for var.central_vpcs.inspection: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"inspection_flow\", \"aws_network_firewall\", \"vpc_flow_logs\", \"subnets\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.inspection, {})), [
       "name",
       "vpc_id",
@@ -78,52 +105,31 @@ EOF
       "vpc_instance_tenancy",
       "vpc_ipv4_ipam_pool_id",
       "vpc_ipv4_netmask_length",
+      "inspection_flow",
+      "aws_network_firewall",
       "vpc_flow_logs",
       "subnets",
       "tags"
     ])) == 0
   }
 
-  # Valid keys for var.central_vpcs.inspection.subnets
+  # Valid values for var.central_vpcs.inspection.inspection_flow
   validation {
-    error_message = "For var.central_vpcs.inspection.subnets, you can only define \"public\", \"inspection\", and \"transit_gateway\" subnets."
-    condition = length(setsubtract(keys(try(var.central_vpcs.inspection.subnets, {})), [
-      "public",
-      "inspection",
-      "transit_gateway"
-    ])) == 0
+    error_message = "Only valid definitions of Inspection Flow in var.central_vpcs.inspection: \"east-west\", \"north-south\", \"all\"."
+    condition = contains(
+      ["east-west", "north-south", "all"],
+      try(var.central_vpcs.inspection.inspection_flow, "all")
+    )
   }
 
-  # Valid keys for var.central_vpcs.inspection.subnets.public
+  # Valid keys for var.central_vpcs.inspection.aws_network_firewall
   validation {
-    error_message = "For Public Subnets in Inspection VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"nat_gateway_configuration\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.inspection.subnets.public, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "nat_gateway_configuration",
-      "tags"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.inspection.subnets.inspection
-  validation {
-    error_message = "For Inspection Subnets in Inspection VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.inspection.subnets.inspection, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.inspection.subnets.public
-  validation {
-    error_message = "For TGW Subnets in Inspection VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.inspection.subnets.transit_gateway, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
+    error_message = "Only valid key values for var.central_vpcs.inspection.aws_network_firewall: \"name\", \"policy_arn\", \"policy_change_protection\", \"subnet_change_protection\", \"tags\"."
+    condition = length(setsubtract(keys(try(var.central_vpcs.inspection.aws_network_firewall, {})), [
+      "name",
+      "policy_arn",
+      "policy_change_protection",
+      "subnet_change_protection",
       "tags"
     ])) == 0
   }
@@ -149,40 +155,7 @@ EOF
     ])) == 0
   }
 
-  # Valid keys for var.central_vpcs.egress.subnets
-  validation {
-    error_message = "For var.central_vpcs.egress.subnets, you can only define \"public\", and \"transit_gateway\" subnets."
-    condition = length(setsubtract(keys(try(var.central_vpcs.egress.subnets, {})), [
-      "public",
-      "transit_gateway"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.egress.subnets.public
-  validation {
-    error_message = "For Public Subnets in Egress VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"nat_gateway_configuration\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.egress.subnets.public, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "nat_gateway_configuration",
-      "tags"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.egress.subnets.transit_gateway
-  validation {
-    error_message = "For TGW Subnets in Egress VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.egress.subnets.transit_gateway, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
-  }
-
   # ---------------- VALIDATION OF SHARED SERVICES VPC ----------------
-  # Valid keys var.central_vpcs.shared_services
   validation {
     error_message = "Only valid key values for central_vpcs.shared_services: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.shared_services, {})), [
@@ -202,39 +175,7 @@ EOF
     ])) == 0
   }
 
-  # Valid keys for var.central_vpcs.shared_services.subnets
-  validation {
-    error_message = "For var.central_vpcs.shared_services.subnets, you can only define \"endpoints\", and \"transit_gateway\" subnets."
-    condition = length(setsubtract(keys(try(var.central_vpcs.shared_services.subnets, {})), [
-      "endpoints",
-      "transit_gateway"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.shared_services.subnets.endpoints
-  validation {
-    error_message = "For Endpoint Subnets in Shared Services VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"nat_gateway_configuration\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.shared_services.subnets.endpoint, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.shared_services.subnets.transit_gateway
-  validation {
-    error_message = "For TGW Subnets in Shared Services VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.shared_services.subnets.transit_gateway, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
-  }
-
   # ---------------- VALIDATION OF INGRESS VPC ----------------
-  # Valid keys var.central_vpcs.ingress
   validation {
     error_message = "Only valid key values for central_vpcs.ingress: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.ingress, {})), [
@@ -254,51 +195,7 @@ EOF
     ])) == 0
   }
 
-  # Valid keys for var.central_vpcs.ingress.subnets
-  validation {
-    error_message = "For var.central_vpcs.ingress.subnets, you can only define \"public\", \"private\",  and \"transit_gateway\" subnets."
-    condition = length(setsubtract(keys(try(var.central_vpcs.ingress.subnets, {})), [
-      "public",
-      "private",
-      "transit_gateway"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.ingress.subnets.public
-  validation {
-    error_message = "For Public Subnets in Ingress VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"nat_gateway_configuration\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.ingress.subnets.public, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.ingress.subnets.private
-  validation {
-    error_message = "For Private Subnets in Ingress VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"nat_gateway_configuration\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.ingress.subnets.private, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.ingress.subnets.transit_gateway
-  validation {
-    error_message = "For TGW Subnets in Ingress VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.ingress.subnets.transit_gateway, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
-  }
-
   # ---------------- VALIDATION OF HYBRID DNS VPC ----------------
-  # Valid keys var.central_vpcs.hybrid_dns
   validation {
     error_message = "Only valid key values for central_vpcs.hybrid_dns: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.hybrid_dns, {})), [
@@ -317,38 +214,37 @@ EOF
       "tags"
     ])) == 0
   }
+}
 
-  # Valid keys for var.central_vpcs.hybrid_dns.subnets
-  validation {
-    error_message = "For var.central_vpcs.shared_services.subnets, you can only define \"endpoints\", and \"transit_gateway\" subnets."
-    condition = length(setsubtract(keys(try(var.central_vpcs.hybrid_dns.subnets, {})), [
-      "endpoints",
-      "transit_gateway"
-    ])) == 0
-  }
+# Network IPv4 CIDR configuration
+variable "network_definition" {
+  type = object({
+    type  = string
+    value = string
+  })
+  description = <<-EOF
+  "Definition of the IPv4 CIDR configuration. The definition is done by using two variables:"
+    - `type` = (string) Defines the type of network definition provided. It has to be either `CIDR` (Supernet's CIDR Block) or `PREFIX_LIST` (prefix list ID containing all the CIDR blocks of the network)
+    - `value` = (string) Either a Supernet's CIDR Block or a prefix list ID. This value needs to be consistent with the `type` provided in this variable.
+  ```
+EOF
 
-  # Valid keys for var.central_vpcs.hybrid_dns.subnets.endpoints
+  # Variable var.network_definition.type can only be 'CIDR' or 'PREFIX_LIST'
   validation {
-    error_message = "For Endpoint Subnets in Shared Services VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"nat_gateway_configuration\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.hybrid_dns.subnets.endpoint, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
-  }
-
-  # Valid keys for var.central_vpcs.hybrid_dns.subnets.transit_gateway
-  validation {
-    error_message = "For TGW Subnets in Shared Services VPC, you can only specify: \"cidrs\", \"netmask\", \"name_prefix\", \"tags\"."
-    condition = length(setsubtract(keys(try(var.central_vpcs.hybrid_dns.subnets.transit_gateway, {})), [
-      "cidrs",
-      "netmask",
-      "name_prefix",
-      "tags"
-    ])) == 0
+    condition     = var.network_definition.type == "CIDR" || var.network_definition.type == "PREFIX_LIST"
+    error_message = "Invalid input in var.network_definition.type, options: \"CIDR\", or \"PREFIX_LIST\"."
   }
 }
 
-
-
+# Spoke VPCs
+variable "spoke_vpcs" {
+  description = <<-EOF
+  Variable is used to provide the Hub and Spoke module the neccessary information about the Spoke VPCs created. Within this variable, a map of routing domains is expected. The *key* of each map will defined that specific routing domain (e.g. prod, nonprod, etc.) and a Transit Gateway Route Table for that routing domain will be created. Inside each routing domain definition, you can define a map of VPCs with the following attributes:
+    - `vpc_id` = (Optional|string) VPC ID. *This value is not used in this version of the module, we keep it as placehoder when adding support for centralized VPC endpoints*.
+    - `transit_gateway_attachment_id` = (Optional|string) Transit Gateway VPC attachment ID.
+  To get more information of the format of the variables, check the section "Spoke VPCs" in the README.
+  ```
+EOF
+  type        = any
+  default     = {}
+}

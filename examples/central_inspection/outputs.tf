@@ -3,22 +3,17 @@
 
 # --- examples/central_inspection/outputs.tf ---
 
-output "transit_gateway" {
-  description = "Transit Gateway ID."
-  value       = aws_ec2_transit_gateway.tgw.id
+output "transit_gateway_id" {
+  description = "ID of the AWS Transit Gateway resource."
+  value       = module.hub-and-spoke.transit_gateway.id
 }
 
 output "central_vpcs" {
-  description = "Central VPCs created (ID)."
+  description = "Central VPCs created."
   value       = { for k, v in module.hub-and-spoke.central_vpcs : k => v.vpc_attributes.id }
 }
 
-output "tgw_rt_central_vpcs" {
-  description = "Transit Gateway Route Tables associated to Central VPC attachments."
-  value       = { for k, v in module.hub-and-spoke.tgw_rt_central_vpcs : k => v.id }
-}
-
-output "tgw_rt_spoke_vpcs" {
-  description = "Transit Gateway Route Table associated to the Spoke VPC attachments."
-  value       = module.hub-and-spoke.tgw_rt_spoke_vpc.id
+output "network_firewall" {
+  description = "AWS Network Firewall ID."
+  value       = module.hub-and-spoke.aws_network_firewall.id
 }

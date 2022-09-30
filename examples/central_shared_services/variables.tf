@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-# --- examples/central_inspection/variables.tf ---
+# --- examples/central_shared_services/variables.tf ---
 
 variable "aws_region" {
   type        = string

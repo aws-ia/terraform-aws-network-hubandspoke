@@ -5,24 +5,55 @@
 
 # AWS TRANSIT GATEWAY (if created)
 output "transit_gateway" {
-  description = "AWS Transit Gateway."
+  description = <<-EOF
+  AWS Transit Gateway resource. Check the resource in the Terraform Registry - [aws_ec2_transit_gateway](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_transit_gateway) - for more information about the output attributes.
+  ```
+EOF
   value       = try(aws_ec2_transit_gateway.tgw[0], null)
 }
 
 # CENTRAL VPCS
 output "central_vpcs" {
-  description = "Central VPCs created."
+  description = <<-EOF
+  Central VPCs created. Check the [AWS VPC Module](https://github.com/aws-ia/terraform-aws-vpc) README for more information about the output attributes.
+  ```
+EOF
   value       = module.central_vpcs
 }
 
-# TRANSIT GATEWAY CENTRAL VPCs ROUTE TABLES
-output "tgw_rt_central_vpcs" {
-  description = "Transit Gateway Route Tables associated to the Central VPC attachments."
-  value       = aws_ec2_transit_gateway_route_table.tgw_route_table
+# TRANSIT GATEWAY ROUTE TABLES
+output "transit_gateway_route_tables" {
+  description = <<-EOF
+  Transit Gateway Route Tables. The format of the output is the following one:
+
+  ```
+  transit_gateway_route_tables = {
+    central_vpcs = {
+      inspection = { ... }
+      egress = { ... }
+      ...
+    }
+    spoke_vpcs = {
+      segment1 = { ... }
+      segment2 = { ... }
+      ...
+    }
+  }  
+  ```
+  Check the AWS Transit Gateway Route Table resource in the Terraform Registry - [aws_ec2_transit_gateway_route_table](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_transit_gateway_route_table) for more information about the output attributes.
+  ```
+EOF
+  value = {
+    central_vpcs = aws_ec2_transit_gateway_route_table.tgw_route_table
+    spoke_vpcs   = local.spoke_vpc_information ? { for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt } : null
+  }
 }
 
-# TRANSIT GATEWAY SPOKE VPC ROUTE TABLE
-output "tgw_rt_spoke_vpc" {
-  description = "Transit Gateway Route Table associated to the Spoke VPCs."
-  value       = aws_ec2_transit_gateway_route_table.spokes_tgw_rt
+# AWS NETWORK FIREWALL RESOURCE (IF CREATED)
+output "aws_network_firewall" {
+  description = <<-EOF
+  AWS Network Firewall resource. Check the resource in the Terraform Registry - [aws_networkfirewall_firewall](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/networkfirewall_firewall) - for more information about the output attributes.
+  ```
+EOF
+  value       = local.create_anfw ? module.aws_network_firewall[0].aws_network_firewall : null
 }
