@@ -26,8 +26,10 @@ resource "aws_ec2_transit_gateway" "tgw" {
 module "central_vpcs" {
   for_each = var.central_vpcs
 
-  source  = "aws-ia/vpc/aws"
-  version = "= 3.0.0"
+  # source  = "aws-ia/vpc/aws"
+  # version = "= 3.0.0"
+
+  source = "github.com/pablo19sc/terraform-aws-vpc"
 
   name               = try(each.value.name, each.key)
   vpc_id             = try(each.value.vpc_id, null)
@@ -267,8 +269,10 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "hybrid_dns_to_spokes
 module "aws_network_firewall" {
   count = local.create_anfw ? 1 : 0
 
-  source  = "aws-ia/networkfirewall/aws"
-  version = "= 0.0.1"
+  # source  = "aws-ia/networkfirewall/aws"
+  # version = "= 0.0.1"
+
+  source = "github.com/pablo19sc/terraform-aws-networkfirewall"
 
   network_firewall_name                     = var.central_vpcs.inspection.aws_network_firewall.name
   network_firewall_policy                   = var.central_vpcs.inspection.aws_network_firewall.policy_arn
