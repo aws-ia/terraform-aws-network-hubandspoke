@@ -27,7 +27,7 @@ module "central_vpcs" {
   for_each = var.central_vpcs
 
   source  = "aws-ia/vpc/aws"
-  version = "= 3.0.0"
+  version = "= 3.0.1"
 
   name               = try(each.value.name, each.key)
   vpc_id             = try(each.value.vpc_id, null)
@@ -268,7 +268,7 @@ module "aws_network_firewall" {
   count = local.create_anfw ? 1 : 0
 
   source  = "aws-ia/networkfirewall/aws"
-  version = "= 0.0.1"
+  version = "= 0.0.2"
 
   network_firewall_name                     = var.central_vpcs.inspection.aws_network_firewall.name
   network_firewall_policy                   = var.central_vpcs.inspection.aws_network_firewall.policy_arn
