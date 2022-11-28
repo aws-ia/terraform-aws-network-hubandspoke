@@ -174,7 +174,7 @@ resource "aws_ec2_transit_gateway_route" "ingress_to_inspection_network_route" {
 }
 
 resource "aws_ec2_transit_gateway_prefix_list_reference" "ingress_to_inspection_network_prefix_list" {
-  count = local.ingress_to_inspection_network && !local.network_pl ? 1 : 0
+  count = local.ingress_to_inspection_network && local.network_pl ? 1 : 0
 
   prefix_list_id                 = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
