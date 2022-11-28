@@ -147,8 +147,8 @@ resource "aws_ec2_transit_gateway_route" "inspection_to_egress_default_route" {
 
 # Static Route from Inspection VPC to Ingress VPC if:
 # 1/ Both Inspection VPC and Ingress VPC are created, and the traffic inspection is "all" or "north-south".  
-resource "aws_ec2_transit_gateway_route" "ingress_to_inspection_network_route" {
-  # count = local.ingress_to_inspection_network && local.network_pl ? 1 : 0
+resource "aws_ec2_transit_gateway_route" "inspection_to_ingress_network_route" {
+  count = local.ingress_to_inspection_network && local.network_pl ? 1 : 0
 
   destination_cidr_block         = "10.120.0.0/24"
   transit_gateway_attachment_id  = module.central_vpcs["ingress"].transit_gateway_attachment_id
