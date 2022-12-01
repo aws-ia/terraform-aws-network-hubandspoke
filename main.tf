@@ -145,6 +145,16 @@ resource "aws_ec2_transit_gateway_route" "inspection_to_egress_default_route" {
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["inspection"].id
 }
 
+# Static Route from Inspection VPC to Ingress VPC if:
+# 1/ Both Inspection VPC and Ingress VPC are created, and the traffic inspection is "all" or "north-south".  
+resource "aws_ec2_transit_gateway_route" "inspection_to_ingress_network_route" {
+  count = local.ingress_to_inspection_network && local.network_pl ? 1 : 0
+
+  destination_cidr_block         = module.central_vpcs["ingress"].vpc_attributes.cidr_block
+  transit_gateway_attachment_id  = module.central_vpcs["ingress"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["inspection"].id
+}
+
 # Static Route (Network's CIDR) from Egress VPC to Inspection VPC if:
 # 1/ Both Inspection VPC and Egress VPC are created, and the traffic inspection is "all" or "north-south".
 resource "aws_ec2_transit_gateway_route" "egress_to_inspection_network_route" {
