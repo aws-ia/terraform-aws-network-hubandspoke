@@ -68,18 +68,32 @@ resource "aws_ec2_transit_gateway_route_table_association" "tgw_route_table_asso
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table[each.key].id
 }
 
-# --------- TRANSIT GATEWAY ROUTE TABLE, ASSOCATIONS, AND PROPAGATIONS (IF APPLIES) - SPOKE VPCS ---------
-module "spoke_vpcs" {
-  for_each = { for k, v in var.spoke_vpcs : k => v if local.spoke_vpc_information }
-  source   = "./modules/spoke_vpcs"
+# --------- TRANSIT GATEWAY ROUTE TABLE, ASSOCIATIONS, AND PROPAGATIONS (IF APPLIES) - SPOKE VPCS ---------
+# Transit Gateway Route Tables (Routing Domains)
+resource "aws_ec2_transit_gateway_route_table" "spokes_tgw_rt" {
+  for_each = toset(local.routing_domains)
 
-  identifier         = var.identifier
   transit_gateway_id = local.transit_gateway_id
 
-  segment_name        = each.key
-  segment_information = each.value
+  tags = {
+    Name = "${each.key}-tgw-rt-${var.identifier}"
+  }
+}
 
-  tgw_attachment_propagation = local.spoke_to_spoke_propagation
+# Spoke VPC TGW association
+resource "aws_ec2_transit_gateway_route_table_association" "spokes_tgw_rt_association" {
+  count = local.number_vpcs
+
+  transit_gateway_attachment_id  = local.vpc_information[count.index].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes_tgw_rt[try(local.vpc_information[count.index].routing_domain, "spokes")].id
+}
+
+# Spoke VPC TGW propagation
+resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_spokes_propagation" {
+  count = local.spoke_to_spoke_propagation ? local.number_vpcs : 0
+
+  transit_gateway_attachment_id  = local.vpc_information[count.index].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes_tgw_rt[try(local.vpc_information[count.index].routing_domain, "spokes")].id
 }
 
 # ---------------------- TRANSIT GATEWAY STATIC ROUTES ----------------------
@@ -88,13 +102,13 @@ module "spoke_vpcs" {
 # 2/ Both Inspection VPC and Egress VPC are created, and the traffic inspection is "all" or "north-south".
 resource "aws_ec2_transit_gateway_route" "spokes_to_inspection_default_route" {
   for_each = {
-    for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt
+    for k, v in aws_ec2_transit_gateway_route_table.spokes_tgw_rt : k => v.id
     if local.spoke_to_inspection_default
   }
 
   destination_cidr_block         = "0.0.0.0/0"
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
-  transit_gateway_route_table_id = each.value.id
+  transit_gateway_route_table_id = each.value
 }
 
 # Static Route (0.0.0.0/0) from Spoke VPCs to Egress VPC if:
@@ -102,37 +116,37 @@ resource "aws_ec2_transit_gateway_route" "spokes_to_inspection_default_route" {
 # 2/ Both Inspection VPC and Egress VPC are created, and the traffic inspection is "east-west".
 resource "aws_ec2_transit_gateway_route" "spokes_to_egress_default_route" {
   for_each = {
-    for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt
+    for k, v in aws_ec2_transit_gateway_route_table.spokes_tgw_rt : k => v.id
     if local.spoke_to_egress_default
   }
 
   destination_cidr_block         = "0.0.0.0/0"
   transit_gateway_attachment_id  = module.central_vpcs["egress"].transit_gateway_attachment_id
-  transit_gateway_route_table_id = each.value.id
+  transit_gateway_route_table_id = each.value
 }
 
 # Static Route (Network's CIDR) from Spoke VPCs to Inspection VPC if:
 # 1/ Both Inspection VPC and Egress VPC are created, and the traffic inspection is "east-west".
 resource "aws_ec2_transit_gateway_route" "spokes_to_inspection_network_route" {
   for_each = {
-    for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt
+    for k, v in aws_ec2_transit_gateway_route_table.spokes_tgw_rt : k => v.id
     if local.spoke_to_inspection_network && !local.network_pl
   }
 
   destination_cidr_block         = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
-  transit_gateway_route_table_id = each.value.id
+  transit_gateway_route_table_id = each.value
 }
 
 resource "aws_ec2_transit_gateway_prefix_list_reference" "spokes_to_inspection_network_prefix_list" {
   for_each = {
-    for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt
+    for k, v in aws_ec2_transit_gateway_route_table.spokes_tgw_rt : k => v.id
     if local.spoke_to_inspection_network && local.network_pl
   }
 
   prefix_list_id                 = var.network_definition.value
   transit_gateway_attachment_id  = module.central_vpcs["inspection"].transit_gateway_attachment_id
-  transit_gateway_route_table_id = each.value.id
+  transit_gateway_route_table_id = each.value
 }
 
 # Static Route (0.0.0.0/0) from Inspection VPC to Egress VPC if:
@@ -182,14 +196,19 @@ resource "aws_ec2_transit_gateway_prefix_list_reference" "ingress_to_inspection_
 }
 
 # -------------------- TRANSIT GATEWAY PROPAGATED ROUTES --------------------
+# Ingress VPC propagates to the Inspection VPC if both Ingress and Inspection are created, and traffic inspection is "all" or "north-south"
+resource "aws_ec2_transit_gateway_route_table_propagation" "ingress_to_inspection_propagation" {
+  count = local.ingress_to_inspection_network ? 1 : 0
+
+  transit_gateway_attachment_id  = module.central_vpcs["ingress"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["inspection"].id
+}
+
 # Spoke VPCs propagation to the Inspection RT - anytime this VPC is created
 resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_inspection_propagation" {
-  for_each = {
-    for k, v in local.transit_gateway_attachment_ids : k => v
-    if local.spoke_to_inspection_propagation
-  }
+  count = local.spoke_to_inspection_propagation ? local.number_vpcs : 0
 
-  transit_gateway_attachment_id  = each.value
+  transit_gateway_attachment_id  = local.vpc_information[count.index].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["inspection"].id
 }
 
@@ -197,12 +216,9 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_inspection
 # 1/ The Egress VPC is created without Inspection VPC or,
 # 2/ Both Egress and Inspection VPC are created, and the traffic inspeciton is "all" or "east-west"
 resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_egress_propagation" {
-  for_each = {
-    for k, v in local.transit_gateway_attachment_ids : k => v
-    if local.spoke_to_egress_propagation
-  }
+  count = local.spoke_to_egress_propagation ? local.number_vpcs : 0
 
-  transit_gateway_attachment_id  = each.value
+  transit_gateway_attachment_id  = local.vpc_information[count.index].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["egress"].id
 }
 
@@ -210,41 +226,45 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_egress_pro
 # 1/ The Ingress VPC is created without Inspection VPC or,
 # 2/ Both Egress and Inspection VPC are created, and the traffic inspeciton is "east-west"
 resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_ingress_propagation" {
+  count = local.spoke_to_ingress_propagation ? local.number_vpcs : 0
+
+  transit_gateway_attachment_id  = local.vpc_information[count.index].transit_gateway_attachment_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["ingress"].id
+}
+
+# Ingress VPC propagates to Spoke VPCs if:
+# 1/ The Ingress VPC is created without Inspection VPC or,
+# 2/ Both Egress and Inspection VPC are created, and the traffic inspection is "east-west"
+resource "aws_ec2_transit_gateway_route_table_propagation" "ingress_to_spokes_propagation" {
   for_each = {
-    for k, v in local.transit_gateway_attachment_ids : k => v
+    for k, v in aws_ec2_transit_gateway_route_table.spokes_tgw_rt : k => v.id
     if local.spoke_to_ingress_propagation
   }
 
-  transit_gateway_attachment_id  = each.value
-  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["ingress"].id
+  transit_gateway_attachment_id  = module.central_vpcs["ingress"].transit_gateway_attachment_id
+  transit_gateway_route_table_id = each.value
 }
 
 # Spoke VPCs propagation to the Shared Services RT - anytime this VPC is created
 resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_shared_services_propagation" {
-  for_each = {
-    for k, v in local.transit_gateway_attachment_ids : k => v
-    if contains(keys(var.central_vpcs), "shared_services")
-  }
+  count = contains(keys(var.central_vpcs), "shared_services") ? local.number_vpcs : 0
 
-  transit_gateway_attachment_id  = each.value
+  transit_gateway_attachment_id  = local.vpc_information[count.index].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["shared_services"].id
 }
 
 # Spoke VPCs propagation to the Hybrid DNS RT - anytime this VPC is created
 resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_hybrid_dns_propagation" {
-  for_each = {
-    for k, v in local.transit_gateway_attachment_ids : k => v
-    if contains(keys(var.central_vpcs), "hybrid_dns")
-  }
+  count = contains(keys(var.central_vpcs), "hybrid_dns") ? local.number_vpcs : 0
 
-  transit_gateway_attachment_id  = each.value
+  transit_gateway_attachment_id  = local.vpc_information[count.index].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["hybrid_dns"].id
 }
 
 # If Shared Services VPC is created, it propagates its CIDR to all the Segment TGW Route Tables
 resource "aws_ec2_transit_gateway_route_table_propagation" "shared_services_to_spokes_propagation" {
   for_each = {
-    for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt.id
+    for k, v in aws_ec2_transit_gateway_route_table.spokes_tgw_rt : k => v.id
     if contains(keys(var.central_vpcs), "shared_services")
   }
 
@@ -255,7 +275,7 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "shared_services_to_s
 # If Hybrid DNS VPC is created, it propagates its CIDR to the Segment TGW Route Tables
 resource "aws_ec2_transit_gateway_route_table_propagation" "hybrid_dns_to_spokes_propagation" {
   for_each = {
-    for k, v in module.spoke_vpcs : k => v.transit_gateway_spoke_rt.id
+    for k, v in aws_ec2_transit_gateway_route_table.spokes_tgw_rt : k => v.id
     if contains(keys(var.central_vpcs), "hybrid_dns")
   }
 

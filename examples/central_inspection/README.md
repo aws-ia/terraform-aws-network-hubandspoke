@@ -21,7 +21,7 @@ This example centralizes the traffic inspection and egress traffic within the sa
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.15.0 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.73.0 |
 | <a name="requirement_awscc"></a> [awscc](#requirement\_awscc) | >= 0.15.0 |
 
@@ -29,13 +29,14 @@ This example centralizes the traffic inspection and egress traffic within the sa
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 4.31.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.73.0 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | ../.. | n/a |
+| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | aws-ia/network-hubandspoke | 2.0.0 |
+| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | 3.1.0 |
 
 ## Resources
 
@@ -51,6 +52,7 @@ This example centralizes the traffic inspection and egress traffic within the sa
 |------|-------------|------|---------|:--------:|
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS Region - to build the Hub and Spoke. | `string` | `"eu-west-1"` | no |
 | <a name="input_identifier"></a> [identifier](#input\_identifier) | Project identifier. | `string` | `"central-inspection"` | no |
+| <a name="input_spoke_vpcs"></a> [spoke\_vpcs](#input\_spoke\_vpcs) | Spoke VPCs. | `map(any)` | <pre>{<br>  "nonprod-vpc": {<br>    "cidr_block": "10.0.1.0/24",<br>    "number_azs": 2,<br>    "routing_domain": "nonprod"<br>  },<br>  "prod-vpc": {<br>    "cidr_block": "10.0.0.0/24",<br>    "number_azs": 2,<br>    "routing_domain": "prod"<br>  }<br>}</pre> | no |
 
 ## Outputs
 
@@ -58,5 +60,6 @@ This example centralizes the traffic inspection and egress traffic within the sa
 |------|-------------|
 | <a name="output_central_vpcs"></a> [central\_vpcs](#output\_central\_vpcs) | Central VPCs created. |
 | <a name="output_network_firewall"></a> [network\_firewall](#output\_network\_firewall) | AWS Network Firewall ID. |
+| <a name="output_spoke_vpcs"></a> [spoke\_vpcs](#output\_spoke\_vpcs) | Spoke VPCs created. |
 | <a name="output_transit_gateway_id"></a> [transit\_gateway\_id](#output\_transit\_gateway\_id) | ID of the AWS Transit Gateway resource. |
 <!-- END_TF_DOCS -->
