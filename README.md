@@ -81,7 +81,7 @@ central_vpcs = {
                 netmask = 24
                 nat_gateway_configuration = "all_azs"
             }
-            endpoints = { netmask = 24 }
+            inspection = { netmask = 24 }
             transit_gateway = { netmask = 28 }
         }
     }
@@ -101,7 +101,7 @@ central_vpcs = {
         az_count = 2
 
         subnets = {
-            endpoints = { netmask = 24 }
+            inspection = { netmask = 24 }
             transit_gateway = { netmask = 28 }
         }
     }
@@ -133,7 +133,7 @@ central_vpcs = {
         }
 
         subnets = {
-            endpoints = { netmask = 24 }
+            inspection = { netmask = 24 }
             transit_gateway = { netmask = 28 }
         }
     }
