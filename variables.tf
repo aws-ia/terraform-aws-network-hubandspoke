@@ -239,12 +239,36 @@ EOF
 # Spoke VPCs
 variable "spoke_vpcs" {
   description = <<-EOF
-  Variable is used to provide the Hub and Spoke module the neccessary information about the Spoke VPCs created. Within this variable, a map of routing domains is expected. The *key* of each map will defined that specific routing domain (e.g. prod, nonprod, etc.) and a Transit Gateway Route Table for that routing domain will be created. Inside each routing domain definition, you can define a map of VPCs with the following attributes:
-    - `vpc_id` = (Optional|string) VPC ID. *This value is not used in this version of the module, we keep it as placehoder when adding support for centralized VPC endpoints*.
-    - `transit_gateway_attachment_id` = (Optional|string) Transit Gateway VPC attachment ID.
+  Variable used to provide the information about the Spoke VPCs to include in the hub and spoke architecture. Information to provide is the following one:
+    - `routing_domains` = (Optional|list(string)) Definition of the different routing domains for the Spoke VPCs - for example *prod* or *dev*. If this variable is not provided, all the Spoke VPCs will be associated to a common routing domain (*spokes*).
+    - `number_vpcs` = (Optional|number) Total number of Spoke VPCs that have been attached to the Transit Gateway, regardless of the routing domain.
+    - `vpc_information` = (Optional|map(string)) Information about the VPCs to include in the architecture. Inside the variable, a map of the following keys is expected:
+      - `vpc_id` = (Optional|string) VPC ID. *This value is not used in this version of the module, we keep it as placehoder when adding support for centralized VPC endpoints*.
+      - `transit_gateway_attachment_id` = (Optional|string) Transit Gateway VPC attachment ID.
+      - `routing_domain` = (Optional|string) Routing domain to include the VPC (Transit Gateway route table association). This value needs to be included in *var.spoke_vpcs.routing_domains*.
   To get more information of the format of the variables, check the section "Spoke VPCs" in the README.
   ```
 EOF
   type        = any
   default     = {}
+
+  # ---------------- VALID KEYS FOR var.spoke_vpcs ----------------
+  validation {
+    error_message = "Only valid key values for var.spoke_vpcs: \"routing_domains\", \"number_vpcs\", \"vpc_information\"."
+    condition = length(setsubtract(keys(var.spoke_vpcs), [
+      "routing_domains",
+      "number_vpcs",
+      "vpc_information"
+    ])) == 0
+  }
+
+  # ---------------- VALID KEYS FOR var.spoke_vpcs.vpc_information (each key) ----------------
+  validation {
+    error_message = "Only valid key values when defining a VPC in var.spoke_vpcs.vpc_information: \"vpc_id\", \"transit_gateway_attachment_id\", \"routing_domain\"."
+    condition = alltrue([for vpc in try(var.spoke_vpcs.vpc_information, {}) : length(setsubtract(keys(vpc), [
+      "vpc_id",
+      "transit_gateway_attachment_id",
+      "routing_domain"
+    ])) == 0])
+  }
 }
