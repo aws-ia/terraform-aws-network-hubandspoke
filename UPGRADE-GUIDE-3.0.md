@@ -1,6 +1,6 @@
 # Upgrade from version 2 to version 3
 
-This VPC module is being upgraded to center all its resources on a single provider. Previously we used the awscc provider for various exploration reasons. However, as the module's usage grows, we wish to place more emphasis on customer experience and using a single provider is more seamless. Unfortunately, replacing the awscc resources requires state manipulation which is detailed below.
+This module is being upgraded to center all its resources on a single provider. Previously we used the awscc provider for various exploration reasons. However, as the module's usage grows, we wish to place more emphasis on customer experience and using a single provider is more seamless. Unfortunately, replacing the awscc resources requires state manipulation which is detailed below.
 
 ## Preparation for upgrade
 
