@@ -4,7 +4,7 @@
 This example builds a central Ingress and Egress VPCs. The following resources are built:
 
 - Built by the **Hub and Spoke module**:
-  - AWS Transit Gateway Route Tables: 1 Ingress, 1 Egress, 1 Spokes (production).
+  - AWS Transit Gateway Route Tables: 1 Ingress, 1 Egress, 1 Spokes.
   - Transit Gateway routes.
   - Ingress and Egress VPC.
 - Built outside the module:
