@@ -4,7 +4,7 @@
 This example builds a central Ingress and Egress VPCs. The following resources are built:
 
 - Built by the **Hub and Spoke module**:
-  - AWS Transit Gateway Route Tables: 1 Ingress, 1 Egress, 1 Spokes (production).
+  - AWS Transit Gateway Route Tables: 1 Ingress, 1 Egress, 1 Spokes.
   - Transit Gateway routes.
   - Ingress and Egress VPC.
 - Built outside the module:
@@ -22,7 +22,6 @@ This example builds a central Ingress and Egress VPCs. The following resources a
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.73.0 |
-| <a name="requirement_awscc"></a> [awscc](#requirement\_awscc) | >= 0.15.0 |
 
 ## Providers
 
@@ -34,8 +33,8 @@ This example builds a central Ingress and Egress VPCs. The following resources a
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | aws-ia/network-hubandspoke | 2.0.0 |
-| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | 3.1.0 |
+| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | aws-ia/network-hubandspoke/aws | 3.0.0 |
+| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | 4.0.0 |
 
 ## Resources
 
