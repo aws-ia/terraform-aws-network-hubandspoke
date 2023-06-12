@@ -33,8 +33,8 @@ This example builds a central Ingress and Egress VPCs. The following resources a
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | aws-ia/network-hubandspoke/aws | 3.0.0 |
-| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | 4.0.0 |
+| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | aws-ia/network-hubandspoke/aws | 3.0.1 |
+| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | 4.3.0 |
 
 ## Resources
 

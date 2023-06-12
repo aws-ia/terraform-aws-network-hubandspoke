@@ -78,7 +78,7 @@ locals {
   number_vpcs     = try(var.spoke_vpcs.number_vpcs, 0)
   routing_domains = local.number_vpcs > 0 ? try(var.spoke_vpcs.routing_domains, ["spokes"]) : []
   # List of the VPC Information (from map)
-  vpc_information = values(try(var.spoke_vpcs.vpc_information, []))
+  vpc_information = try(values(var.spoke_vpcs.vpc_information), [])
 
   # Boolean to indicate if the network's route definition is done with a managed prefix list (for the Transit Gateway Route Tables)
   network_pl = var.network_definition.type == "PREFIX_LIST" ? true : false

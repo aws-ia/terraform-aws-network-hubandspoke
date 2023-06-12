@@ -81,7 +81,7 @@ central_vpcs = {
                 netmask = 24
                 nat_gateway_configuration = "all_azs"
             }
-            inspection = { netmask = 24 }
+            endpoints = { netmask = 24 }
             transit_gateway = { netmask = 28 }
         }
     }
@@ -101,7 +101,7 @@ central_vpcs = {
         az_count = 2
 
         subnets = {
-            inspection = { netmask = 24 }
+            endpoints = { netmask = 24 }
             transit_gateway = { netmask = 28 }
         }
     }
@@ -133,7 +133,7 @@ central_vpcs = {
         }
 
         subnets = {
-            inspection = { netmask = 24 }
+            endpoints = { netmask = 24 }
             transit_gateway = { netmask = 28 }
         }
     }
@@ -149,7 +149,6 @@ When defining a central Egress VPC, the following subnet configuration is expect
 
 ```hcl
 central_vpcs = {
-
     egress = {
         name = "egress-vpc"
         cidr_block = "10.10.0.0/24"
@@ -174,6 +173,7 @@ central_vpcs = {
                 cidrs = ["10.10.0.32/28", "10.10.0.48/28"]
             }
         }
+    }
 }
 ```
 
@@ -370,7 +370,7 @@ Each Spoke VPC segment created is independent between each other, meaning that i
 | Name | Source | Version |
 |------|--------|---------|
 | <a name="module_aws_network_firewall"></a> [aws\_network\_firewall](#module\_aws\_network\_firewall) | aws-ia/networkfirewall/aws | = 0.0.2 |
-| <a name="module_central_vpcs"></a> [central\_vpcs](#module\_central\_vpcs) | aws-ia/vpc/aws | = 4.0.0 |
+| <a name="module_central_vpcs"></a> [central\_vpcs](#module\_central\_vpcs) | aws-ia/vpc/aws | = 4.3.0 |
 
 ## Resources
 

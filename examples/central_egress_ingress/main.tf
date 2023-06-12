@@ -19,7 +19,7 @@ resource "aws_ec2_transit_gateway" "tgw" {
 # Hub and Spoke module - we only centralize the Egress and Ingress traffic
 module "hub-and-spoke" {
   source  = "aws-ia/network-hubandspoke/aws"
-  version = "3.0.0"
+  version = "3.0.1"
 
   identifier         = var.identifier
   transit_gateway_id = aws_ec2_transit_gateway.tgw.id
@@ -75,7 +75,7 @@ resource "aws_ec2_managed_prefix_list" "network_prefix_list" {
 module "spoke_vpcs" {
   for_each = var.spoke_vpcs
   source   = "aws-ia/vpc/aws"
-  version  = "4.0.0"
+  version  = "4.3.0"
 
   name       = each.key
   cidr_block = each.value.cidr_block
