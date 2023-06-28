@@ -3,13 +3,13 @@
 
 # --- root/variables.tf ---
 
-# Module identifier
+# MODULE IDENTIFIER
 variable "identifier" {
   type        = string
   description = "String to identify the whole Hub and Spoke environment."
 }
 
-# AWS Transit Gateway Information
+# AWS TRANSIT GATEWAY INFORMATION
 variable "transit_gateway_id" {
   type        = string
   description = "Transit Gateway ID. **If you specify this value, transit_gateway_attributes can't be set**."
@@ -49,7 +49,7 @@ EOF
   }
 }
 
-# Central VPCs
+# CENTRAL VPCs
 variable "central_vpcs" {
   description = <<-EOF
   Configuration of the Central VPCs - used to centralized different services. You can create the following central VPCs: "inspection", "egress", "shared-services", "hybrid-dns", and "ingress".
@@ -66,6 +66,7 @@ variable "central_vpcs" {
   ```
 EOF
   type        = any
+  default     = {}
 
   # ---------------- VALID KEYS FOR var.central_vpcs ----------------
   validation {
@@ -216,7 +217,7 @@ EOF
   }
 }
 
-# Network IPv4 CIDR configuration
+# NETWORK IPv4 CIDR CONFIGURATION
 variable "network_definition" {
   type = object({
     type  = string
@@ -236,7 +237,7 @@ EOF
   }
 }
 
-# Spoke VPCs
+# SPOKE VPCs
 variable "spoke_vpcs" {
   description = <<-EOF
   Variable used to provide the information about the Spoke VPCs to include in the hub and spoke architecture. Information to provide is the following one:
@@ -271,4 +272,11 @@ EOF
       "routing_domain"
     ])) == 0])
   }
+}
+
+# TAGS
+variable "tags" {
+  description = "Tags to apply to all resources."
+  type        = map(string)
+  default     = {}
 }

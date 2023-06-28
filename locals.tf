@@ -281,3 +281,12 @@ locals {
     )
   }
 }
+
+# santizes tags for both aws provider
+# aws   tags = module.tags.tags_aws
+module "tags" {
+  source  = "aws-ia/label/aws"
+  version = "0.0.5"
+
+  tags = var.tags
+}

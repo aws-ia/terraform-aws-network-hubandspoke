@@ -13,6 +13,10 @@ module "hub-and-spoke" {
     name            = "tgw-${var.identifier}"
     description     = "Transit_Gateway-${var.identifier}"
     amazon_side_asn = 65000
+
+    tags = {
+      team = "networking"
+    }
   }
 
   network_definition = {
@@ -37,6 +41,14 @@ module "hub-and-spoke" {
         endpoints       = { netmask = 28 }
         transit_gateway = { netmask = 28 }
       }
+
+      tags = {
+        team = "security"
+      }
     }
+  }
+
+  tags = {
+    project = "central-inspection"
   }
 }
