@@ -185,7 +185,7 @@ locals {
     transit_gateway = merge(
       {
         name_prefix                                     = try(var.central_vpcs.egress.subnets.transit_gateway.name_prefix, "egress-vpc-tgw")
-        connect_to_public_natgw                         = try(var.central_vpcs.inspection.subnets.public.nat_gateway_configuration, "all_azs") != "none" ? true : false
+        connect_to_public_natgw                         = try(var.central_vpcs.egress.subnets.public.nat_gateway_configuration, "all_azs") != "none" ? true : false
         transit_gateway_default_route_table_association = false
         transit_gateway_default_route_table_propagation = false
         tags                                            = try(var.central_vpcs.egress.subnets.transit_gateway.tags, {})
