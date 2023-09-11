@@ -4,11 +4,10 @@
 This example builds a central Ingress and Egress VPCs. The following resources are built:
 
 - Built by the **Hub and Spoke module**:
-  - AWS Transit Gateway Route Tables: 1 Ingress, 1 Egress, 1 Spokes.
+  - AWS Transit Gateway Route Tables: 1 Ingress, 1 Egress.
   - Transit Gateway routes.
   - Ingress and Egress VPC.
 - Built outside the module:
-  - AWS Transit Gateway.
   - Managed Prefix List
 
 ## Deployment instructions
@@ -33,8 +32,7 @@ This example builds a central Ingress and Egress VPCs. The following resources a
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | aws-ia/network-hubandspoke/aws | 3.0.0 |
-| <a name="module_spoke_vpcs"></a> [spoke\_vpcs](#module\_spoke\_vpcs) | aws-ia/vpc/aws | 4.0.0 |
+| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | aws-ia/network-hubandspoke/aws | 3.1.0 |
 
 ## Resources
 
@@ -49,13 +47,11 @@ This example builds a central Ingress and Egress VPCs. The following resources a
 |------|-------------|------|---------|:--------:|
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS Region - to build the Hub and Spoke. | `string` | `"eu-west-1"` | no |
 | <a name="input_identifier"></a> [identifier](#input\_identifier) | Project identifier. | `string` | `"central-egress-ingress"` | no |
-| <a name="input_spoke_vpcs"></a> [spoke\_vpcs](#input\_spoke\_vpcs) | Spoke VPCs. | `map(any)` | <pre>{<br>  "vpc1": {<br>    "cidr_block": "10.0.0.0/24",<br>    "number_azs": 2,<br>    "routing_domain": "prod"<br>  },<br>  "vpc2": {<br>    "cidr_block": "10.0.1.0/24",<br>    "number_azs": 2,<br>    "routing_domain": "prod"<br>  }<br>}</pre> | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
 | <a name="output_central_vpcs"></a> [central\_vpcs](#output\_central\_vpcs) | Central VPCs created. |
-| <a name="output_spoke_vpcs"></a> [spoke\_vpcs](#output\_spoke\_vpcs) | Spoke VPCs created. |
 | <a name="output_transit_gateway_id"></a> [transit\_gateway\_id](#output\_transit\_gateway\_id) | ID of the AWS Transit Gateway resource. |
 <!-- END_TF_DOCS -->

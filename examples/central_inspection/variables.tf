@@ -14,20 +14,3 @@ variable "identifier" {
   description = "Project identifier."
   default     = "central-inspection"
 }
-
-variable "spoke_vpcs" {
-  type        = map(any)
-  description = "Spoke VPCs."
-  default = {
-    "prod-vpc" = {
-      routing_domain = "prod"
-      cidr_block     = "10.0.0.0/24"
-      number_azs     = 2
-    }
-    "nonprod-vpc" = {
-      routing_domain = "nonprod"
-      cidr_block     = "10.0.1.0/24"
-      number_azs     = 2
-    }
-  }
-}

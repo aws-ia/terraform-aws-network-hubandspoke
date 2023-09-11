@@ -17,9 +17,13 @@ resource "aws_ec2_transit_gateway" "tgw" {
   transit_gateway_cidr_blocks     = try(var.transit_gateway_attributes.transit_gateway_cidr_blocks, [])
   vpn_ecmp_support                = try(var.transit_gateway_attributes.vpn_ecmp_support, "enable")
 
-  tags = merge({
-    Name = try(var.transit_gateway_attributes.name, "tgw-${var.identifier}")
-  }, try(var.transit_gateway_attributes.tags, {}))
+  tags = merge(
+    {
+      Name = try(var.transit_gateway_attributes.name, "tgw-${var.identifier}")
+    },
+    module.tags.tags_aws,
+    try(var.transit_gateway_attributes.tags, {})
+  )
 }
 
 # ---------------- CENTRAL VPCs ----------------
@@ -27,7 +31,7 @@ module "central_vpcs" {
   for_each = var.central_vpcs
 
   source  = "aws-ia/vpc/aws"
-  version = "= 4.0.0"
+  version = "= 4.3.0"
 
   name               = try(each.value.name, each.key)
   vpc_id             = try(each.value.vpc_id, null)
@@ -47,7 +51,10 @@ module "central_vpcs" {
   transit_gateway_id     = local.transit_gateway_id
   transit_gateway_routes = local.transit_gateway_routes[each.key]
 
-  tags = try(each.value.tags, {})
+  tags = merge(
+    module.tags.tags_aws,
+    try(each.value.tags, {})
+  )
 }
 
 # -------- TRANSIT GATEWAY ROUTE TABLE AND ASSOCATIONS - CENTRAL VPCS --------
@@ -56,9 +63,12 @@ resource "aws_ec2_transit_gateway_route_table" "tgw_route_table" {
 
   transit_gateway_id = local.transit_gateway_id
 
-  tags = {
-    Name = "${each.key}-tgw-rt-${var.identifier}"
-  }
+  tags = merge(
+    {
+      Name = "${each.key}-tgw-rt-${var.identifier}"
+    },
+    module.tags.tags_aws
+  )
 }
 
 resource "aws_ec2_transit_gateway_route_table_association" "tgw_route_table_association" {
@@ -75,9 +85,12 @@ resource "aws_ec2_transit_gateway_route_table" "spokes_tgw_rt" {
 
   transit_gateway_id = local.transit_gateway_id
 
-  tags = {
-    Name = "${each.key}-tgw-rt-${var.identifier}"
-  }
+  tags = merge(
+    {
+      Name = "${each.key}-tgw-rt-${var.identifier}"
+    },
+    module.tags.tags_aws
+  )
 }
 
 # Spoke VPC TGW association
@@ -299,6 +312,11 @@ module "aws_network_firewall" {
   vpc_subnets           = { for k, v in module.central_vpcs["inspection"].private_subnet_attributes_by_az : split("/", k)[1] => v.id if split("/", k)[0] == "endpoints" }
   number_azs            = var.central_vpcs.inspection.az_count
   routing_configuration = local.anfw_routing_configuration[local.inspection_configuration]
+
+  tags = merge(
+    module.tags.tags_aws,
+    try(var.central_vpcs.inspection.tags, {})
+  )
 }
 
 # We need to get the CIDR blocks from a provided managed prefix list if:

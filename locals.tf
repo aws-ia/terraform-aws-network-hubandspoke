@@ -78,7 +78,7 @@ locals {
   number_vpcs     = try(var.spoke_vpcs.number_vpcs, 0)
   routing_domains = local.number_vpcs > 0 ? try(var.spoke_vpcs.routing_domains, ["spokes"]) : []
   # List of the VPC Information (from map)
-  vpc_information = values(try(var.spoke_vpcs.vpc_information, []))
+  vpc_information = try(values(var.spoke_vpcs.vpc_information), [])
 
   # Boolean to indicate if the network's route definition is done with a managed prefix list (for the Transit Gateway Route Tables)
   network_pl = var.network_definition.type == "PREFIX_LIST" ? true : false
@@ -185,7 +185,7 @@ locals {
     transit_gateway = merge(
       {
         name_prefix                                     = try(var.central_vpcs.egress.subnets.transit_gateway.name_prefix, "egress-vpc-tgw")
-        connect_to_public_natgw                         = try(var.central_vpcs.inspection.subnets.public.nat_gateway_configuration, "all_azs") != "none" ? true : false
+        connect_to_public_natgw                         = try(var.central_vpcs.egress.subnets.public.nat_gateway_configuration, "all_azs") != "none" ? true : false
         transit_gateway_default_route_table_association = false
         transit_gateway_default_route_table_propagation = false
         tags                                            = try(var.central_vpcs.egress.subnets.transit_gateway.tags, {})
@@ -280,4 +280,13 @@ locals {
       try(var.central_vpcs.hybrid_dns.subnets.transit_gateway, {})
     )
   }
+}
+
+# santizes tags for both aws provider
+# aws   tags = module.tags.tags_aws
+module "tags" {
+  source  = "aws-ia/label/aws"
+  version = "0.0.5"
+
+  tags = var.tags
 }

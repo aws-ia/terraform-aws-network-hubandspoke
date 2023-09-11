@@ -12,8 +12,3 @@ output "central_vpcs" {
   description = "Central VPCs created."
   value       = { for k, v in module.hub-and-spoke.central_vpcs : k => v.vpc_attributes.id }
 }
-
-output "spoke_vpcs" {
-  description = "Spoke VPCs created."
-  value       = { for k, v in module.spoke_vpcs : k => v.vpc_attributes.id }
-}

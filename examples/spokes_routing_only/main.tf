@@ -19,7 +19,7 @@ resource "aws_ec2_transit_gateway" "tgw" {
 # Hub and Spoke module - we only centralize the Shared Services and Hybrid DNS VPCs
 module "hub-and-spoke" {
   source  = "aws-ia/network-hubandspoke/aws"
-  version = "3.0.1"
+  version = "3.1.0"
 
   identifier         = var.identifier
   transit_gateway_id = aws_ec2_transit_gateway.tgw.id
@@ -29,24 +29,13 @@ module "hub-and-spoke" {
     value = "10.0.0.0/14"
   }
 
-  central_vpcs = {
-    shared_services = {
-      name       = "shared-services-vpc"
-      cidr_block = "10.10.0.0/24"
-      az_count   = 2
-
-      subnets = {
-        endpoints       = { netmask = 28 }
-        transit_gateway = { netmask = 28 }
-      }
-    }
-  }
-
   spoke_vpcs = {
-    number_vpcs = length(var.spoke_vpcs)
+    routing_domains = ["prod", "nonprod"]
+    number_vpcs     = length(var.spoke_vpcs)
     vpc_information = { for k, v in module.spoke_vpcs : k => {
       vpc_id                        = v.vpc_attributes.id
       transit_gateway_attachment_id = v.transit_gateway_attachment_id
+      routing_domain                = var.spoke_vpcs[k].domain
     } }
   }
 }

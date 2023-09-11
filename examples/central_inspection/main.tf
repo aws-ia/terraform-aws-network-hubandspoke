@@ -6,13 +6,17 @@
 # Hub and Spoke module - we only centralize the Inspection
 module "hub-and-spoke" {
   source  = "aws-ia/network-hubandspoke/aws"
-  version = "3.0.0"
+  version = "3.0.1"
 
   identifier = var.identifier
   transit_gateway_attributes = {
     name            = "tgw-${var.identifier}"
     description     = "Transit_Gateway-${var.identifier}"
     amazon_side_asn = 65000
+
+    tags = {
+      team = "networking"
+    }
   }
 
   network_definition = {
@@ -37,41 +41,14 @@ module "hub-and-spoke" {
         endpoints       = { netmask = 28 }
         transit_gateway = { netmask = 28 }
       }
+
+      tags = {
+        team = "security"
+      }
     }
   }
 
-  spoke_vpcs = {
-    number_vpcs     = length(var.spoke_vpcs)
-    routing_domains = ["prod", "nonprod"]
-    vpc_information = { for k, v in module.spoke_vpcs : k => {
-      vpc_id                        = v.vpc_attributes.id
-      transit_gateway_attachment_id = v.transit_gateway_attachment_id
-      routing_domain                = var.spoke_vpcs[k].routing_domain
-    } }
-  }
-}
-
-# Spoke VPCs 
-module "spoke_vpcs" {
-  for_each = var.spoke_vpcs
-  source   = "aws-ia/vpc/aws"
-  version  = "4.0.0"
-
-  name       = each.key
-  cidr_block = each.value.cidr_block
-  az_count   = each.value.number_azs
-
-  transit_gateway_id = module.hub-and-spoke.transit_gateway.id
-  transit_gateway_routes = {
-    workloads = "0.0.0.0/0"
-  }
-
-  subnets = {
-    workload = { netmask = 28 }
-    transit_gateway = {
-      netmask                                         = 28
-      transit_gateway_default_route_table_association = false
-      transit_gateway_default_route_table_propagation = false
-    }
+  tags = {
+    project = "central-inspection"
   }
 }
