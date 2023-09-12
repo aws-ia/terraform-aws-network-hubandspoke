@@ -6,7 +6,7 @@
 # Hub and Spoke module - we only centralize the Inspection
 module "hub-and-spoke" {
   source  = "aws-ia/network-hubandspoke/aws"
-  version = "3.0.1"
+  version = "3.0.2"
 
   identifier = var.identifier
   transit_gateway_attributes = {
@@ -32,8 +32,9 @@ module "hub-and-spoke" {
       inspection_flow = "north-south"
 
       aws_network_firewall = {
-        name       = "anfw-${var.identifier}"
-        policy_arn = aws_networkfirewall_firewall_policy.anfw_policy.arn
+        name        = "anfw-${var.identifier}"
+        description = "AWS Network Firewall - ${var.identifier}"
+        policy_arn  = aws_networkfirewall_firewall_policy.anfw_policy.arn
       }
 
       subnets = {

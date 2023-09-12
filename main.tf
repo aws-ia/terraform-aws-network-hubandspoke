@@ -301,9 +301,10 @@ module "aws_network_firewall" {
   count = local.create_anfw ? 1 : 0
 
   source  = "aws-ia/networkfirewall/aws"
-  version = "= 0.0.2"
+  version = "= 1.0.0"
 
   network_firewall_name                     = var.central_vpcs.inspection.aws_network_firewall.name
+  network_firewall_description              = var.central_vpcs.inspection.aws_network_firewall.description
   network_firewall_policy                   = var.central_vpcs.inspection.aws_network_firewall.policy_arn
   network_firewall_policy_change_protection = try(var.central_vpcs.inspection.aws_network_firewall.network_firewall_policy_change_protection, false)
   network_firewall_subnet_change_protection = try(var.central_vpcs.inspection.aws_network_firewall.network_firewall_subnet_change_protection, false)
