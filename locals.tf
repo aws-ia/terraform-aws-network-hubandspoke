@@ -61,14 +61,14 @@ locals {
   anfw_routing_configuration = {
     with_internet = {
       centralized_inspection_with_egress = {
-        tgw_subnet_route_tables    = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.transit_gateway : k => v.id }, {})
-        public_subnet_route_tables = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.public : k => v.id }, {})
-        network_cidr_blocks        = local.network_cidr_list
+        connectivity_subnet_route_tables = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.transit_gateway : k => v.id }, {})
+        public_subnet_route_tables       = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.public : k => v.id }, {})
+        network_cidr_blocks              = local.network_cidr_list
       }
     }
     without_internet = {
       centralized_inspection_without_egress = {
-        tgw_subnet_route_tables = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.transit_gateway : k => v.id }, {})
+        connectivity_subnet_route_tables = try({ for k, v in module.central_vpcs["inspection"].rt_attributes_by_type_by_az.transit_gateway : k => v.id }, {})
       }
     }
   }

@@ -113,6 +113,7 @@ In addition to the subnet definition, two more attributes can be defined in the 
 - `inspection_flow` = (Optional|string) To indicate how the traffic should be inspected. You can define the following values: `all` (default), `east-west`, `north-south`.
 - `aws_network_firewall` = (Optional|map(any)) The Hub and Spoke module also support the creation of AWS Network Firewall, using the [AWS Network Firewall module](https://registry.terraform.io/modules/aws-ia/networkfirewall/aws/latest). The module will create the firewall resource and all the routing needed in the Inspection VPC, and you will need to define the following attributes:
     - `name` = (Required|string) Name of the AWS Network Firewall resource.
+    - `description` = (Required|string) Description for the AWS Network Firewall resource.
     - `policy_arn` = (Required|string) ARN of the AWS Network Firewall Policy resource.
     - `policy_change_protection` = (Optional|bool) To indicate whether it is possible to change the associated firewall policy after creation. Defaults to `false`.
     - `subnet_change_protection` = (Optional|bool) To indicate whether it is possible to change the associated subnet(s) after creation. Defaults to `false`.
@@ -369,7 +370,7 @@ Each Spoke VPC segment created is independent between each other, meaning that i
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_aws_network_firewall"></a> [aws\_network\_firewall](#module\_aws\_network\_firewall) | aws-ia/networkfirewall/aws | = 0.0.2 |
+| <a name="module_aws_network_firewall"></a> [aws\_network\_firewall](#module\_aws\_network\_firewall) | aws-ia/networkfirewall/aws | = 1.0.0 |
 | <a name="module_central_vpcs"></a> [central\_vpcs](#module\_central\_vpcs) | aws-ia/vpc/aws | = 4.3.0 |
 | <a name="module_tags"></a> [tags](#module\_tags) | aws-ia/label/aws | 0.0.5 |
 

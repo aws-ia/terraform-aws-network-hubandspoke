@@ -21,6 +21,9 @@ module "hub-and-spoke" {
   source  = "aws-ia/network-hubandspoke/aws"
   version = "3.1.0"
 
+  # For testing purposes, uncomment the line below and comment the "source" and "version" lines above
+  #source = "../.."
+
   identifier         = var.identifier
   transit_gateway_id = aws_ec2_transit_gateway.tgw.id
 
