@@ -40,7 +40,7 @@ locals {
   # If TGW is created by this module, then associate and propagate all created Central VPCs with TGW
   # If TGW is not created, then associate and propagate only the Central VPCs that have the attribute "associate_and_propagate_to_tgw" set to true
   associate_and_propagate_to_tgw = {
-    for k, v in var.var.central_vpcs: k => try(v.associate_and_propagate_to_tgw, true) != false || create_tgw ? true : false
+    for k, v in var.central_vpcs : k => try(v.associate_and_propagate_to_tgw, true) != false || local.create_tgw ? true : false
   }
 
   # Shared Services TGW routing configuration - with our without "dns" subnets
