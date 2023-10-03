@@ -272,7 +272,7 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_shared_ser
 
 # Spoke VPCs propagation to the Hybrid DNS RT - anytime this VPC is created
 resource "aws_ec2_transit_gateway_route_table_propagation" "spokes_to_hybrid_dns_propagation" {
-  count = contains(keys(var.central_vpcs), "hybrid_dns") && try(local.associate_and_propagate_to_tgw["hybrid_dns"], try) ? local.number_vpcs : 0
+  count = contains(keys(var.central_vpcs), "hybrid_dns") && try(local.associate_and_propagate_to_tgw["hybrid_dns"], true) ? local.number_vpcs : 0
 
   transit_gateway_attachment_id  = local.vpc_information[count.index].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw_route_table["hybrid_dns"].id
