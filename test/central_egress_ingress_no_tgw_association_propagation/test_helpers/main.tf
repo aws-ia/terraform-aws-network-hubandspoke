@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 # AWS Transit Gateway
 resource "aws_ec2_transit_gateway" "tgw" {
 
