@@ -11,7 +11,7 @@ import (
 )
 
 func TestCentralSharedServicesNoAssociationAndPropagation(t *testing.T) {
-    helperDir := "./test_helpers"
+    hclFixturesDir := "./hcl_fixtures"
     mainTestDir := "../../"
 
     randomId := random.UniqueId()
@@ -20,8 +20,8 @@ func TestCentralSharedServicesNoAssociationAndPropagation(t *testing.T) {
     logger.Log(t, "Test: Creating TGW and Spoke VPCs...")
     logger.Log(t, "=============================================")
 
-    helperStageOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-        TerraformDir: helperDir,
+    hclFixturesOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
+        TerraformDir: hclFixturesDir,
         Vars: map[string]interface{}{
            "identifier": identifier,
            "spoke_vpcs": map[string]interface{}{
@@ -37,13 +37,13 @@ func TestCentralSharedServicesNoAssociationAndPropagation(t *testing.T) {
             },
         NoColor: true,
     })
-    defer CleanUp(t, helperStageOptions)
-    defer terraform.Destroy(t, helperStageOptions)
+    defer CleanUp(t, hclFixturesOptions)
+    defer terraform.Destroy(t, hclFixturesOptions)
 
-    terraform.InitAndApply(t, helperStageOptions)
+    terraform.InitAndApply(t, hclFixturesOptions)
 
-    tgwId := terraform.Output(t, helperStageOptions, "transit_gateway_id")
-    spokeVPCsAttributes := terraform.OutputMapOfObjects(t, helperStageOptions, "spoke_vpcs_attributes")
+    tgwId := terraform.Output(t, hclFixturesOptions, "transit_gateway_id")
+    spokeVPCsAttributes := terraform.OutputMapOfObjects(t, hclFixturesOptions, "spoke_vpcs_attributes")
     assert.NotNil(t, tgwId)
     assert.NotEmpty(t, spokeVPCsAttributes)
 

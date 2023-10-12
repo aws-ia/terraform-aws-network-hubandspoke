@@ -11,7 +11,7 @@ import (
 )
 
 func TestCentralInspectionNoAssociationAndPropagation(t *testing.T) {
-    helperDir := "./test_helpers"
+    hclFixturesDir := "./hcl_fixtures"
     mainTestDir := "../../"
 
     randomId := random.UniqueId()
@@ -20,19 +20,19 @@ func TestCentralInspectionNoAssociationAndPropagation(t *testing.T) {
     logger.Log(t, "Test: Creating Network Firewall Policy...")
     logger.Log(t, "=============================================")
 
-    helperStageOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-        TerraformDir: helperDir,
+    hclFixturesOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
+        TerraformDir: hclFixturesDir,
         Vars: map[string]interface{}{
            "identifier": identifier,
         },
         NoColor: true,
     })
-    defer CleanUp(t, helperStageOptions)
-    defer terraform.Destroy(t, helperStageOptions)
+    defer CleanUp(t, hclFixturesOptions)
+    defer terraform.Destroy(t, hclFixturesOptions)
 
-    terraform.InitAndApply(t, helperStageOptions)
+    terraform.InitAndApply(t, hclFixturesOptions)
 
-    netFwPolicyArn := terraform.Output(t, helperStageOptions, "network_firewall_policy_arn")
+    netFwPolicyArn := terraform.Output(t, hclFixturesOptions, "network_firewall_policy_arn")
     assert.NotNil(t, netFwPolicyArn)
 
     logger.Log(t, "Network Firewall Policy ARN: %s", netFwPolicyArn)

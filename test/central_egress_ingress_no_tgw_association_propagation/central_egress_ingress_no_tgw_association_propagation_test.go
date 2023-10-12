@@ -11,7 +11,7 @@ import (
 )
 
 func TestCentralEgressIngressNoAssociationAndPropagation(t *testing.T) {
-    helperDir := "./test_helpers"
+    hclFixturesDir := "./hcl_fixtures"
     mainTestDir := "../../"
 
     randomId := random.UniqueId()
@@ -20,20 +20,20 @@ func TestCentralEgressIngressNoAssociationAndPropagation(t *testing.T) {
     logger.Log(t, "Test: Creating TGW and Managed Prefix List...")
     logger.Log(t, "=============================================")
 
-    helperStageOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-        TerraformDir: helperDir,
+    hclFixturesOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
+        TerraformDir: hclFixturesDir,
         Vars: map[string]interface{}{
            "identifier": identifier,
         },
         NoColor: true,
     })
-    defer CleanUp(t, helperStageOptions)
-    defer terraform.Destroy(t, helperStageOptions)
+    defer CleanUp(t, hclFixturesOptions)
+    defer terraform.Destroy(t, hclFixturesOptions)
 
-    terraform.InitAndApply(t, helperStageOptions)
+    terraform.InitAndApply(t, hclFixturesOptions)
 
-    tgwId := terraform.Output(t, helperStageOptions, "transit_gateway_id")
-    prefixListId := terraform.Output(t, helperStageOptions, "network_prefix_list_id")
+    tgwId := terraform.Output(t, hclFixturesOptions, "transit_gateway_id")
+    prefixListId := terraform.Output(t, hclFixturesOptions, "network_prefix_list_id")
     assert.NotNil(t, tgwId)
     assert.NotNil(t, prefixListId)
 
