@@ -47,3 +47,7 @@ keys/
 # TFLINT
 
 .tflint.hcl
+
+# Ignore Terratest go.mod and go.sum files
+go.mod
+go.sum
