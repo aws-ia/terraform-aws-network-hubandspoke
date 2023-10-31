@@ -62,6 +62,7 @@ variable "central_vpcs" {
   - `vpc_instance_tenancy` = (Optional|string) The allowed tenancy of instances launched into the VPC.
   - `vpc_flow_logs` = (Optional|object(any)) Configuration of the VPC Flow Logs of the VPC configured. Options: "cloudwatch", "s3", "none".
   - `subnet_configuration` = (Optional|any) Configuration of the subnets to create in the VPC. Depending the type of central VPC to create, the format (subnets to configure) will be different.
+  - `associate_and_propagate_to_tgw` = (Optional|bool) Whether the VPC attachment should be associated and propagated to the Transit Gateway route tables. It is always `true` if TGW is created by this module. Can be set to `false` if TGW is created separately and only TGW ID is passed to the module. Default: `true`.
   To get more information of the format of the variables, check the section "Central VPCs" in the README.
   ```
 EOF
@@ -94,7 +95,7 @@ EOF
 
   # ---------------- VALIDATION OF INSPECTION VPC ----------------
   validation {
-    error_message = "Only valid key values for var.central_vpcs.inspection: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"inspection_flow\", \"aws_network_firewall\", \"vpc_flow_logs\", \"subnets\", \"tags\"."
+    error_message = "Only valid key values for var.central_vpcs.inspection: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"inspection_flow\", \"aws_network_firewall\", \"vpc_flow_logs\", \"subnets\", \"associate_and_propagate_to_tgw\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.inspection, {})), [
       "name",
       "vpc_id",
@@ -110,6 +111,7 @@ EOF
       "aws_network_firewall",
       "vpc_flow_logs",
       "subnets",
+      "associate_and_propagate_to_tgw",
       "tags"
     ])) == 0
   }
@@ -139,7 +141,7 @@ EOF
   # ---------------- VALIDATION OF EGRESS VPC ----------------
   # Valid keys var.central_vpcs.egress
   validation {
-    error_message = "Only valid key values for central_vpcs.egress: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"tags\"."
+    error_message = "Only valid key values for central_vpcs.egress: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"associate_and_propagate_to_tgw\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.egress, {})), [
       "name",
       "vpc_id",
@@ -153,13 +155,14 @@ EOF
       "vpc_ipv4_netmask_length",
       "vpc_flow_logs",
       "subnets",
+      "associate_and_propagate_to_tgw",
       "tags"
     ])) == 0
   }
 
   # ---------------- VALIDATION OF SHARED SERVICES VPC ----------------
   validation {
-    error_message = "Only valid key values for central_vpcs.shared_services: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"tags\"."
+    error_message = "Only valid key values for central_vpcs.shared_services: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"associate_and_propagate_to_tgw\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.shared_services, {})), [
       "name",
       "vpc_id",
@@ -173,13 +176,14 @@ EOF
       "vpc_ipv4_netmask_length",
       "vpc_flow_logs",
       "subnets",
+      "associate_and_propagate_to_tgw",
       "tags"
     ])) == 0
   }
 
   # ---------------- VALIDATION OF INGRESS VPC ----------------
   validation {
-    error_message = "Only valid key values for central_vpcs.ingress: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"tags\"."
+    error_message = "Only valid key values for central_vpcs.ingress: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"associate_and_propagate_to_tgw\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.ingress, {})), [
       "name",
       "vpc_id",
@@ -193,13 +197,14 @@ EOF
       "vpc_ipv4_netmask_length",
       "vpc_flow_logs",
       "subnets",
+      "associate_and_propagate_to_tgw",
       "tags"
     ])) == 0
   }
 
   # ---------------- VALIDATION OF HYBRID DNS VPC ----------------
   validation {
-    error_message = "Only valid key values for central_vpcs.hybrid_dns: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"tags\"."
+    error_message = "Only valid key values for central_vpcs.hybrid_dns: \"name\", \"vpc_id\", \"cidr_block\", \"vpc_secondary_cidr\", \"az_count\", \"vpc_enable_dns_hostnames\", \"vpc_enable_dns_support\",  \"vpc_instance_tenancy\",  \"vpc_ipv4_ipam_pool_id\",  \"vpc_ipv4_netmask_length\",  \"vpc_flow_logs\", \"subnets\", \"associate_and_propagate_to_tgw\", \"tags\"."
     condition = length(setsubtract(keys(try(var.central_vpcs.hybrid_dns, {})), [
       "name",
       "vpc_id",
@@ -213,6 +218,7 @@ EOF
       "vpc_ipv4_netmask_length",
       "vpc_flow_logs",
       "subnets",
+      "associate_and_propagate_to_tgw",
       "tags"
     ])) == 0
   }

@@ -44,7 +44,7 @@ output "transit_gateway_route_tables" {
   ```
 EOF
   value = {
-    central_vpcs = aws_ec2_transit_gateway_route_table.tgw_route_table
+    central_vpcs = try(aws_ec2_transit_gateway_route_table.tgw_route_table, {})
     spoke_vpcs   = aws_ec2_transit_gateway_route_table.spokes_tgw_rt
   }
 }
@@ -57,3 +57,4 @@ output "aws_network_firewall" {
 EOF
   value       = local.create_anfw ? module.aws_network_firewall[0].aws_network_firewall : null
 }
+
