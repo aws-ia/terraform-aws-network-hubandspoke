@@ -18,11 +18,7 @@ resource "aws_ec2_transit_gateway" "tgw" {
 
 # Hub and Spoke module - we only centralize the Egress and Ingress traffic
 module "hub-and-spoke" {
-  source  = "aws-ia/network-hubandspoke/aws"
-  version = "3.1.0"
-
-  # For testing purposes, uncomment the line below and comment the "source" and "version" lines above
-  #source = "../.."
+  source = "../.."
 
   identifier         = var.identifier
   transit_gateway_id = aws_ec2_transit_gateway.tgw.id
@@ -48,6 +44,8 @@ module "hub-and-spoke" {
       name       = "ingress-vpc"
       cidr_block = "10.20.0.0/24"
       az_count   = 2
+
+      associate_and_propagate_to_tgw = false
 
       subnets = {
         public          = { netmask = 28 }
