@@ -34,7 +34,7 @@ This example centralizes the traffic inspection and egress traffic within the sa
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | aws-ia/network-hubandspoke/aws | 3.0.2 |
+| <a name="module_hub-and-spoke"></a> [hub-and-spoke](#module\_hub-and-spoke) | ../.. | n/a |
 
 ## Resources
 

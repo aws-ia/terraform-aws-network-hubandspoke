@@ -5,11 +5,7 @@
 
 # Hub and Spoke module - we only centralize the Inspection
 module "hub-and-spoke" {
-  source  = "aws-ia/network-hubandspoke/aws"
-  version = "3.0.2"
-  
-  # For testing purposes, uncomment the line below and comment the "source" and "version" lines above
-  #source = "../.."
+  source = "../.."
 
   identifier = var.identifier
   transit_gateway_attributes = {
